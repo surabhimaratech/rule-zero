@@ -1,116 +1,118 @@
 package com.rule_zero.backend.world;
 
-import org.springframework.data.neo4j.core.Neo4jClient;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/world")
+@RequestMapping("/api/worlds")
 @CrossOrigin(origins = "http://localhost:5173")
 public class WorldController {
 
-    private final Neo4jClient neo4jClient;
     private final WorldService worldService;
 
-    public WorldController(
-        Neo4jClient neo4jClient,
-        WorldService worldService
-    ) {
-        this.neo4jClient = neo4jClient;
+    public WorldController(WorldService worldService) {
         this.worldService = worldService;
     }
 
-    @GetMapping("/graph")
-    public GraphResponse getGraph() {
-
-        List<GraphResponse.GraphNode> nodes =
-                neo4jClient.query("""
-                    MATCH (n:WorldNode)
-                    RETURN
-                        n.id AS id,
-                        n.title AS title,
-                        n.description AS description,
-                        n.domain AS domain,
-                        n.nodeType AS nodeType
-                """)
-                .fetchAs(GraphResponse.GraphNode.class)
-                .mappedBy((typeSystem, record) ->
-                        new GraphResponse.GraphNode(
-                                record.get("id").asString(),
-                                record.get("title").asString(),
-                                record.get("description").asString(),
-                                record.get("domain").asString(),
-                                record.get("nodeType").asString()
-                        )
-                )
-                .all()
-                .stream()
-                .toList();
-
-        List<GraphResponse.GraphEdge> edges =
-                neo4jClient.query("""
-                    MATCH (a:WorldNode)-[r]->(b:WorldNode)
-                    RETURN
-                        a.id AS source,
-                        b.id AS target,
-                        type(r) AS relationship
-                """)
-                .fetch()
-                .all()
-                .stream()
-                .map(row -> {
-                    String source = row.get("source").toString();
-                    String target = row.get("target").toString();
-                    String relationship = row.get("relationship").toString();
-
-                    return new GraphResponse.GraphEdge(
-                            source + "-" + target,
-                            source,
-                            target,
-                            relationship
-                    );
-                })
-                .toList();
-
-        return new GraphResponse(nodes, edges);
+    @PostMapping
+    public CreateWorldResponse createWorld(
+            @RequestBody CreateWorldRequest request
+    ) {
+        return worldService.createWorld(request.rule());
     }
 
-    @PostMapping("/create")
-    public void createWorld(@RequestBody CreateWorldRequest request) {
-        worldService.createWorld(request.rule());
+    @GetMapping
+    public List<WorldSummary> getWorlds() {
+        return worldService.getWorlds();
     }
 
-    @PostMapping("/nodes/{nodeId}/expand")
-    public void expandNode(@PathVariable String nodeId) {
-        worldService.expandNode(nodeId);
+    @GetMapping("/{worldId}")
+    public WorldSummary getWorld(@PathVariable String worldId) {
+        return worldService.getWorld(worldId);
     }
 
-    @GetMapping("/nodes/{nodeId}/why")
-    public Map<String, String> explainWhy(@PathVariable String nodeId) {
-        return worldService.explainWhy(nodeId);
+    @PatchMapping("/{worldId}")
+    public WorldSummary renameWorld(
+            @PathVariable String worldId,
+            @RequestBody RenameWorldRequest request
+    ) {
+        return worldService.renameWorld(worldId, request);
     }
 
-    @PostMapping("/nodes/{nodeId}/change")
+    @PostMapping("/{worldId}/fork")
+    public WorldSummary forkWorld(
+            @PathVariable String worldId,
+            @RequestBody(required = false) ForkWorldRequest request
+    ) {
+        return worldService.forkWorld(worldId, request);
+    }
+
+    @GetMapping("/{worldId}/compare/{otherWorldId}")
+    public WorldComparisonResponse compareWorlds(
+            @PathVariable String worldId,
+            @PathVariable String otherWorldId
+    ) {
+        return worldService.compareWorlds(worldId, otherWorldId);
+    }
+
+    @DeleteMapping("/{worldId}")
+    public void deleteWorld(@PathVariable String worldId) {
+        worldService.deleteWorld(worldId);
+    }
+
+    @GetMapping("/{worldId}/graph")
+    public GraphResponse getGraph(@PathVariable String worldId) {
+        return worldService.getGraph(worldId);
+    }
+
+    @PostMapping("/{worldId}/nodes/{nodeId}/expand")
+    public void expandNode(
+            @PathVariable String worldId,
+            @PathVariable String nodeId
+    ) {
+        worldService.expandNode(worldId, nodeId);
+    }
+
+    @GetMapping("/{worldId}/nodes/{nodeId}/why")
+    public Map<String, String> explainWhy(
+            @PathVariable String worldId,
+            @PathVariable String nodeId
+    ) {
+        return worldService.explainWhy(worldId, nodeId);
+    }
+
+    @PostMapping("/{worldId}/nodes/{nodeId}/change")
     public void changeOutcome(
+            @PathVariable String worldId,
             @PathVariable String nodeId,
             @RequestBody ChangeOutcomeRequest request
     ) {
-        worldService.changeOutcome(nodeId, request);
+        worldService.changeOutcome(worldId, nodeId, request);
     }
 
-    @PostMapping("/nodes/{nodeId}/alternatives")
+    @PostMapping("/{worldId}/nodes/{nodeId}/alternatives")
     public GeneratedAlternativesResponse generateOutcomeAlternatives(
+            @PathVariable String worldId,
             @PathVariable String nodeId
     ) {
-        return worldService.generateOutcomeAlternatives(nodeId);
+        return worldService.generateOutcomeAlternatives(worldId, nodeId);
     }
 
-    @GetMapping("/nodes/{nodeId}/explanation")
+    @GetMapping("/{worldId}/nodes/{nodeId}/explanation")
     public Map<String, String> getExistingExplanation(
+            @PathVariable String worldId,
             @PathVariable String nodeId
     ) {
-        return worldService.getExistingExplanation(nodeId);
+        return worldService.getExistingExplanation(worldId, nodeId);
     }
 }

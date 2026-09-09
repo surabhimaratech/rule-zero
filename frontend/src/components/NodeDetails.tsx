@@ -199,6 +199,9 @@ export default function NodeDetails({
 
   const isRoot =
     node.data.nodeType === "rule";
+  const domainClass = node.data.domain
+    .toLowerCase()
+    .replaceAll(" ", "-");
 
   return (
     <aside className="node-details">
@@ -211,7 +214,9 @@ export default function NodeDetails({
 
       {!isEditing ? (
         <>
-          <div className="detail-label">
+          <div
+            className={`detail-domain-badge detail-domain-${domainClass}`}
+          >
             {node.data.domain}
           </div>
 
@@ -257,6 +262,7 @@ export default function NodeDetails({
 
           <div className="detail-actions">
             <button
+              className="detail-action-insight"
               onClick={() => void handleExplain()}
               disabled={
                 isRoot ||
@@ -274,6 +280,7 @@ export default function NodeDetails({
             </button>
 
             <button
+              className="detail-action-expand"
               onClick={() =>
                 void onExpand(node.id)
               }
@@ -289,6 +296,7 @@ export default function NodeDetails({
             </button>
 
             <button
+              className="detail-action-change"
               onClick={() => {
                 setChangeError(null);
                 setReplacementMode("alternatives");

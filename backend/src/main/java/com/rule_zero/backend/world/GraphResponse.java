@@ -3,6 +3,7 @@ package com.rule_zero.backend.world;
 import java.util.List;
 
 public record GraphResponse(
+        String worldId,
         List<GraphNode> nodes,
         List<GraphEdge> edges
 ) {

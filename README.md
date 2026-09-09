@@ -4,6 +4,8 @@ A causal world simulator for exploring how one change to reality reshapes everyt
 
 Rule Zero lets a user define a foundational rule for a fictional world. OpenRouter generates plausible consequences, which are stored and displayed as an interactive causal graph. Users can expand branches, inspect why a consequence happened, generate alternate outcomes, or replace an outcome manually.
 
+Worlds are persisted independently in Neo4j, so users can return to a simulated universe later without losing its expanded branches or explanations.
+
 ## Key features
 
 - Define a foundational world rule
@@ -35,6 +37,8 @@ React -> Spring Boot -> OpenRouter
 
 The frontend calls the Spring Boot API. The backend uses OpenRouter for generation and Neo4j for graph persistence.
 
+Each `World` owns its `WorldNode` records through `HAS_NODE` relationships. Causal links remain `CAUSES` relationships between nodes in the same world.
+
 ## Local setup
 
 ### Neo4j Desktop
@@ -54,6 +58,7 @@ Set the required OpenRouter credential and start Spring Boot:
 ```bash
 cd backend
 export OPENROUTER_API_KEY="your-key"
+export NEO4J_PASSWORD="your-neo4j-password"
 ./mvnw spring-boot:run
 ```
 
@@ -70,6 +75,12 @@ npm run dev
 ```
 
 The frontend runs at `http://localhost:5173`.
+
+The `My Worlds` library lists saved universes and supports opening, renaming, and deleting them. The active world ID is the only application state stored in browser local storage; Neo4j remains the source of truth for every graph and explanation.
+
+### Existing local graph
+
+The multi-world schema does not automatically wrap an older unscoped graph. For this early V1, reset the local Neo4j Desktop database once, or remove the old `WorldNode` data before creating your first world with the new version. New worlds do not delete or affect one another.
 
 ## How it works
 

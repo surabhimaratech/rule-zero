@@ -1,4 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import {
   Background,
   Controls,
@@ -44,8 +49,13 @@ type LoadedGraph = {
   edges: Edge[];
 };
 
-const NODE_WIDTH = 180;
-const NODE_HEIGHT = 180;
+type Props = {
+  worldId: string | null;
+  onWorldCreated: (worldId: string) => void;
+};
+
+const NODE_WIDTH = 210;
+const NODE_HEIGHT = 210;
 
 function layoutGraph(
   nodes: Node<WorldNodeData>[],
@@ -57,8 +67,8 @@ function layoutGraph(
 
   graph.setGraph({
     rankdir: "LR",
-    ranksep: 140,
-    nodesep: 70,
+    ranksep: 180,
+    nodesep: 96,
   });
 
   nodes.forEach((node) => {
@@ -87,7 +97,10 @@ function layoutGraph(
   });
 }
 
-export default function WorldGraph() {
+export default function WorldGraph({
+  worldId,
+  onWorldCreated,
+}: Props) {
   const [nodes, setNodes, onNodesChange] =
     useNodesState<Node<WorldNodeData>>([]);
 
@@ -102,9 +115,11 @@ export default function WorldGraph() {
   const [isExpanding, setIsExpanding] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadGraph = useCallback(async (): Promise<LoadedGraph> => {
+  const loadGraph = useCallback(async (
+    requestedWorldId: string
+  ): Promise<LoadedGraph> => {
     const response = await fetch(
-      "http://localhost:8080/api/world/graph"
+      `http://localhost:8080/api/worlds/${requestedWorldId}/graph`
     );
 
     if (!response.ok) {
@@ -132,7 +147,6 @@ export default function WorldGraph() {
         source: edge.source,
         target: edge.target,
         type: "smoothstep",
-        label: edge.relationship,
       }));
 
     const laidOutNodes = layoutGraph(
@@ -150,11 +164,24 @@ export default function WorldGraph() {
   }, [setNodes, setEdges]);
 
   useEffect(() => {
-    loadGraph().catch((err) => {
-      console.error(err);
-      setError("Could not load the current world.");
+    startTransition(() => {
+      setSelectedNode(null);
     });
-  }, [loadGraph]);
+
+    if (!worldId) {
+      startTransition(() => {
+        setError(null);
+        setNodes([]);
+        setEdges([]);
+      });
+      return;
+    }
+
+    loadGraph(worldId).catch((err) => {
+      console.error(err);
+      setError("Could not load this world.");
+    });
+  }, [loadGraph, setEdges, setNodes, worldId]);
 
   async function createWorld() {
     const trimmedRule = rule.trim();
@@ -168,7 +195,7 @@ export default function WorldGraph() {
 
     try {
       const response = await fetch(
-        "http://localhost:8080/api/world/create",
+        "http://localhost:8080/api/worlds",
         {
           method: "POST",
           headers: {
@@ -184,9 +211,9 @@ export default function WorldGraph() {
         throw new Error("Failed to create world");
       }
 
-      await loadGraph();
+      const data: { worldId: string } = await response.json();
 
-      setSelectedNode(null);
+      onWorldCreated(data.worldId);
       setRule("");
     } catch (err) {
       console.error(err);
@@ -202,7 +229,7 @@ export default function WorldGraph() {
     nodeId: string
   ): Promise<string> {
     const response = await fetch(
-      `http://localhost:8080/api/world/nodes/${nodeId}/why`
+      `http://localhost:8080/api/worlds/${worldId}/nodes/${nodeId}/why`
     );
 
     if (!response.ok) {
@@ -219,7 +246,7 @@ export default function WorldGraph() {
     nodeId: string
   ): Promise<string | null> {
     const response = await fetch(
-      `http://localhost:8080/api/world/nodes/${nodeId}/explanation`
+      `http://localhost:8080/api/worlds/${worldId}/nodes/${nodeId}/explanation`
     );
 
     if (!response.ok) {
@@ -242,7 +269,7 @@ export default function WorldGraph() {
 
     try {
       const response = await fetch(
-        `http://localhost:8080/api/world/nodes/${nodeId}/expand`,
+        `http://localhost:8080/api/worlds/${worldId}/nodes/${nodeId}/expand`,
         {
           method: "POST",
         }
@@ -252,7 +279,9 @@ export default function WorldGraph() {
         throw new Error("Failed to expand node");
       }
 
-      await loadGraph();
+      if (worldId) {
+        await loadGraph(worldId);
+      }
       setSelectedNode(null);
     } catch (err) {
       console.error(err);
@@ -272,7 +301,7 @@ export default function WorldGraph() {
 
     try {
       const response = await fetch(
-        `http://localhost:8080/api/world/nodes/${nodeId}/change`,
+        `http://localhost:8080/api/worlds/${worldId}/nodes/${nodeId}/change`,
         {
           method: "POST",
           headers: {
@@ -288,7 +317,7 @@ export default function WorldGraph() {
         throw new Error("Failed to change outcome");
       }
 
-      const refreshed = await loadGraph();
+      const refreshed = await loadGraph(worldId!);
 
       const updatedNode =
         refreshed.nodes.find(
@@ -307,7 +336,7 @@ export default function WorldGraph() {
     nodeId: string
   ): Promise<OutcomeAlternative[]> {
     const response = await fetch(
-      `http://localhost:8080/api/world/nodes/${nodeId}/alternatives`,
+      `http://localhost:8080/api/worlds/${worldId}/nodes/${nodeId}/alternatives`,
       { method: "POST" }
     );
 
@@ -336,33 +365,87 @@ export default function WorldGraph() {
       (edge) => edge.source === selectedNode.id
     );
 
+  const selectedPathIds = new Set<string>();
+
+  if (selectedNode) {
+    selectedPathIds.add(selectedNode.id);
+
+    let currentId = selectedNode.id;
+    let parentEdge = edges.find(
+      (edge) => edge.target === currentId
+    );
+
+    while (parentEdge) {
+      selectedPathIds.add(parentEdge.source);
+      currentId = parentEdge.source;
+      parentEdge = edges.find(
+        (edge) => edge.target === currentId
+      );
+    }
+  }
+
+  const displayedNodes = nodes.map((node) => ({
+    ...node,
+    className:
+      selectedNode && !selectedPathIds.has(node.id)
+        ? "graph-node-dimmed"
+        : selectedNode
+          ? "graph-node-on-path"
+          : undefined,
+  }));
+
+  const displayedEdges = edges.map((edge) => ({
+    ...edge,
+    className:
+      selectedNode &&
+      selectedPathIds.has(edge.source) &&
+      selectedPathIds.has(edge.target)
+        ? "graph-edge-on-path"
+        : selectedNode
+          ? "graph-edge-dimmed"
+          : undefined,
+  }));
+
+  const currentWorld = worldId !== null;
+
   return (
     <>
       <div className="rule-input-container">
-        <input
-          value={rule}
-          onChange={(event) =>
-            setRule(event.target.value)
-          }
-          placeholder="Define a rule of this world..."
-          disabled={isCreating}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              void createWorld();
-            }
-          }}
-        />
+        <div className="rule-input-copy">
+          <div className="rule-input-kicker">FOUNDATION / 01</div>
+          <label htmlFor="world-rule-input">
+            What is true in this world?
+          </label>
+          <p>Set the first condition and watch its consequences unfold.</p>
+        </div>
 
-        <button
-          onClick={() => void createWorld()}
-          disabled={
-            isCreating || !rule.trim()
-          }
-        >
-          {isCreating
-            ? "Simulating..."
-            : "Simulate"}
-        </button>
+        <div className="rule-input-control">
+          <input
+            id="world-rule-input"
+            value={rule}
+            onChange={(event) =>
+              setRule(event.target.value)
+            }
+            placeholder="e.g. Humans no longer need sleep"
+            disabled={isCreating}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                void createWorld();
+              }
+            }}
+          />
+
+          <button
+            onClick={() => void createWorld()}
+            disabled={
+              isCreating || !rule.trim()
+            }
+          >
+            {isCreating
+              ? "Simulating..."
+              : "Simulate world"}
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -373,14 +456,23 @@ export default function WorldGraph() {
 
       <div className="world-layout">
         <div className="graph-container">
+          {!currentWorld && (
+            <div className="world-empty-state">
+              <div className="empty-state-orbit" />
+              <div className="eyebrow">NO ACTIVE UNIVERSE</div>
+              <h2>Define a rule to begin.</h2>
+              <p>Your first condition will become the source of a new causal world.</p>
+            </div>
+          )}
           <ReactFlow
-            nodes={nodes}
-            edges={edges}
+            nodes={displayedNodes}
+            edges={displayedEdges}
             nodeTypes={nodeTypes}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onNodeClick={handleNodeClick}
             fitView
+            fitViewOptions={{ padding: 0.18, minZoom: 0.45 }}
             minZoom={0.4}
             maxZoom={1.5}
           >
