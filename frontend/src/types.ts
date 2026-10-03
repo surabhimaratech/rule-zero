@@ -49,3 +49,23 @@ export type WorldComparison = {
   onlyInA: ComparisonNode[];
   onlyInB: ComparisonNode[];
 };
+
+export type FaultLineFaction = {
+  name: string;
+  belief: string;
+  goal: string;
+  fear: string;
+  supportingNodeIds: string[];
+};
+
+export type FaultLine = {
+  title: string;
+  tension: string;
+  factionA: FaultLineFaction;
+  factionB: FaultLineFaction;
+  flashpoint: string;
+};
+
+export type FaultLineResponse = {
+  faultLines: FaultLine[];
+};

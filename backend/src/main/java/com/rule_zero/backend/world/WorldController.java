@@ -115,4 +115,11 @@ public class WorldController {
     ) {
         return worldService.getExistingExplanation(worldId, nodeId);
     }
+
+    @PostMapping("/{worldId}/analysis/fault-lines")
+    public FaultLineResponse findFaultLines(
+            @PathVariable String worldId
+    ) {
+        return worldService.findFaultLines(worldId);
+    }
 }

@@ -1,5 +1,6 @@
 package com.rule_zero.backend.world;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.data.neo4j.core.Neo4jClient;
 import org.springframework.stereotype.Service;
 
@@ -528,6 +529,7 @@ public class WorldService {
                     .run();
         }
 
+        invalidateWorldAnalysis(worldId);
         touchWorld(worldId);
     }
 
@@ -686,6 +688,17 @@ public class WorldService {
                 .run();
     }
 
+    private void invalidateWorldAnalysis(String worldId) {
+        neo4jClient.query("""
+                MATCH (world:World {id: $worldId})
+                REMOVE
+                    world.faultLinesJson,
+                    world.faultLinesGeneratedAt
+                """)
+                .bind(worldId).to("worldId")
+                .run();
+    }
+
     private WorldSummary mapWorldSummary(Map<String, Object> row) {
         return new WorldSummary(
                 row.get("id").toString(),
@@ -697,5 +710,128 @@ public class WorldService {
                 row.get("forkedFromWorldId") == null ? null : row.get("forkedFromWorldId").toString(),
                 row.get("forkedAt") == null ? null : row.get("forkedAt").toString()
         );
+    }
+
+    public FaultLineResponse findFaultLines(String worldId) {
+        WorldSummary world = getWorld(worldId);
+
+        Map<String, Object> cached =
+                neo4jClient.query("""
+                        MATCH (world:World {id: $worldId})
+                        RETURN
+                            world.faultLinesJson AS faultLinesJson,
+                            world.faultLinesGeneratedAt AS generatedAt
+                        """)
+                        .bind(worldId).to("worldId")
+                        .fetch()
+                        .one()
+                        .orElseThrow(() ->
+                                new RuntimeException("World not found")
+                        );
+
+        Object cachedJson = cached.get("faultLinesJson");
+
+        if (cachedJson != null) {
+            try {
+                return new ObjectMapper().readValue(
+                        cachedJson.toString(),
+                        FaultLineResponse.class
+                );
+            } catch (Exception e) {
+                throw new RuntimeException(
+                        "Failed to parse cached fault lines",
+                        e
+                );
+            }
+        }
+
+        List<Map<String, Object>> nodes =
+                neo4jClient.query("""
+                        MATCH (world:World {id: $worldId})-[:HAS_NODE]->(node:WorldNode)
+                        OPTIONAL MATCH (parent:WorldNode)-[:CAUSES]->(node)
+                        WHERE (world)-[:HAS_NODE]->(parent)
+                        RETURN
+                            node.id AS id,
+                            node.title AS title,
+                            node.description AS description,
+                            node.domain AS domain,
+                            node.nodeType AS nodeType,
+                            parent.id AS parentId,
+                            parent.title AS parentTitle
+                        ORDER BY node.nodeType, node.title
+                        """)
+                        .bind(worldId).to("worldId")
+                        .fetch()
+                        .all()
+                        .stream()
+                        .toList();
+
+        StringBuilder context = new StringBuilder();
+
+        context.append("World name: ")
+                .append(world.name())
+                .append("\n");
+
+        context.append("Foundational rule: ")
+                .append(world.rootRule())
+                .append("\n\n");
+
+        context.append("World nodes:\n");
+
+        for (Map<String, Object> node : nodes) {
+            context.append("- ID: ")
+                    .append(node.get("id"))
+                    .append("\n");
+
+            context.append("  Title: ")
+                    .append(node.get("title"))
+                    .append("\n");
+
+            context.append("  Description: ")
+                    .append(node.get("description"))
+                    .append("\n");
+
+            context.append("  Domain: ")
+                    .append(node.get("domain"))
+                    .append("\n");
+
+            if (node.get("parentTitle") != null) {
+                context.append("  Caused by: ")
+                        .append(node.get("parentTitle"))
+                        .append("\n");
+            }
+
+            context.append("\n");
+        }
+
+        FaultLineResponse result =
+                openRouterService.generateFaultLines(
+                        context.toString()
+                );
+
+        try {
+            String json =
+                    new ObjectMapper()
+                            .writeValueAsString(result);
+
+            neo4jClient.query("""
+                    MATCH (world:World {id: $worldId})
+                    SET
+                        world.faultLinesJson = $json,
+                        world.faultLinesGeneratedAt = $generatedAt
+                    """)
+                    .bind(worldId).to("worldId")
+                    .bind(json).to("json")
+                    .bind(Instant.now().toString()).to("generatedAt")
+                    .run();
+
+        } catch (Exception e) {
+            throw new RuntimeException(
+                    "Failed to cache fault lines",
+                    e
+            );
+        }
+
+        return result;
     }
 }

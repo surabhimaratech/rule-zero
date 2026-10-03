@@ -401,5 +401,105 @@ public class OpenRouterService {
         }
         }
 
+        public FaultLineResponse generateFaultLines(String worldContext) {
+                String prompt = """
+                        You are analyzing a fictional world as a whole.
+
+                        Your task is to identify ideological fault lines that plausibly
+                        emerge from the world's existing conditions and consequences.
+
+                        Important:
+                        - Analyze the entire world, not a single node.
+                        - Generate exactly 3 fault lines.
+                        - Each fault line must emerge from the supplied world state.
+                        - Each side should have a defensible worldview.
+                        - Avoid simplistic good-vs-evil factions.
+                        - The factions should disagree because they interpret or respond
+                        differently to the same underlying world.
+                        - Ground each faction in actual node IDs from the supplied world.
+                        - Do not invent supporting node IDs.
+                        - Use only IDs that appear in the supplied context.
+                        - A supporting node should materially help explain why that faction exists.
+                        - Keep names concise and evocative.
+                        - Keep tension to at most 2 sentences.
+                        - Keep each belief, goal, and fear to 1 concise sentence.
+                        - Keep the flashpoint to 1 concise sentence.
+                        - The flashpoint should be a concrete event, law, crisis, or decision
+                        that could turn ideological tension into open conflict.
+
+                        Return ONLY valid JSON in this exact shape:
+
+                        {
+                        "faultLines": [
+                        {
+                        "title": "short name for the ideological divide",
+                        "tension": "short explanation of why this fault line emerges",
+                        "factionA": {
+                                "name": "faction name",
+                                "belief": "core belief",
+                                "goal": "what they want",
+                                "fear": "what they fear",
+                                "supportingNodeIds": ["existing-node-id"]
+                        },
+                        "factionB": {
+                                "name": "faction name",
+                                "belief": "core belief",
+                                "goal": "what they want",
+                                "fear": "what they fear",
+                                "supportingNodeIds": ["existing-node-id"]
+                        },
+                        "flashpoint": "concrete event that could trigger open conflict"
+                        }
+                        ]
+                        }
+
+                        Current world:
+                        %s
+                        """.formatted(worldContext);
+
+                Map<String, Object> body = Map.of(
+                        "model", "openai/gpt-4.1-mini",
+                        "max_tokens", 2200,
+                        "messages", List.of(
+                                Map.of(
+                                        "role", "user",
+                                        "content", prompt
+                                )
+                        )
+                );
+
+                String response = restClient.post()
+                        .body(body)
+                        .retrieve()
+                        .body(String.class);
+
+                try {
+                        JsonNode root = objectMapper.readTree(response);
+
+                        String content =
+                                root.path("choices")
+                                        .get(0)
+                                        .path("message")
+                                        .path("content")
+                                        .asText();
+
+                        String cleanedContent = content
+                                .replace("```json", "")
+                                .replace("```", "")
+                                .trim();
+
+                        return objectMapper.readValue(
+                                cleanedContent,
+                                FaultLineResponse.class
+                        );
+
+                } catch (Exception e) {
+                        throw new RuntimeException(
+                                "Failed to parse fault line response",
+                                e
+                        );
+                }
+        }
+
 
 }
