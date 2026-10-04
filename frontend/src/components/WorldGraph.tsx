@@ -227,6 +227,7 @@ export default function WorldGraph({
     useState(false);
   const [evidenceFocusNodeId, setEvidenceFocusNodeId] =
     useState<string | null>(null);
+  const [isConflictImmersive, setIsConflictImmersive] = useState(false);
   const [inquiryNodeId, setInquiryNodeId] =
     useState<string | null>(null);
   const [detailIntent, setDetailIntent] =
@@ -490,6 +491,7 @@ export default function WorldGraph({
       setShowEverydayObjects(false);
       setSelectedFaultLineIndex(null);
       setIsFaultLineDetailsOpen(false);
+      setIsConflictImmersive(false);
       setShowFaultLines(true);
       return;
     }
@@ -792,6 +794,7 @@ export default function WorldGraph({
         setSelectedFaultLineIndex(null);
         setShowEverydayObjects(false);
         setIsFaultLineDetailsOpen(false);
+        setIsConflictImmersive(false);
         ignitionRunRef.current += 1;
         setShowIgnitionPrompt(false);
         setIgnitionVisibleIds(null);
@@ -1176,7 +1179,7 @@ export default function WorldGraph({
         </div>
       )}
 
-      <div className={`world-layout${showFaultLines ? " field-guide-open" : ""}`}>
+      <div className={`world-layout${showFaultLines && !isConflictImmersive ? " field-guide-open" : ""}${isConflictImmersive ? " conflict-immersive" : ""}`}>
         <div className="graph-container">
           {currentWorld && !showFaultLines && (
             <div className="causal-depth-regions" aria-hidden="true">
@@ -1217,12 +1220,22 @@ export default function WorldGraph({
             </button>
           )}
 
+          {isConflictImmersive && (
+            <button
+              className="conflict-immersive-return"
+              onClick={() => setIsConflictImmersive(false)}
+            >
+              ← Back to Field Guide
+            </button>
+          )}
+
           {currentWorld && !ignitionVisibleIds && (
             <nav className="world-chapter-bar" aria-label="Field Guide chapters">
               <span className="world-chapter-label">FIELD GUIDE</span>
               <button
                 className={!showFaultLines && !showEverydayObjects ? "active" : ""}
                 onClick={() => {
+                  setIsConflictImmersive(false);
                   setShowFaultLines(false);
                   setShowEverydayObjects(false);
                   setSelectedFaultLineIndex(null);
@@ -1390,7 +1403,7 @@ export default function WorldGraph({
           />
         )}
 
-        {showFaultLines && (
+        {showFaultLines && !isConflictImmersive && (
           <FaultLinePanel
             faultLines={faultLines}
             evidenceNodes={faultLineEvidenceNodes}
@@ -1409,16 +1422,53 @@ export default function WorldGraph({
                 );
               }
             }}
+            onTraceCauses={() => {
+              const pathNodes = nodes.filter(
+                (node) => factionAPathIds.has(node.id) || factionBPathIds.has(node.id)
+              );
+
+              if (flowInstanceRef.current && pathNodes.length > 0) {
+                void flowInstanceRef.current.fitView({
+                  nodes: pathNodes,
+                  padding: 0.2,
+                  minZoom: 0.5,
+                  maxZoom: 0.9,
+                  duration: 650,
+                });
+              }
+            }}
+            onEnterConflict={() => {
+              setEvidenceFocusNodeId(null);
+              setIsConflictImmersive(true);
+
+              const conflictNodes = nodes.filter(
+                (node) => factionAPathIds.has(node.id) || factionBPathIds.has(node.id)
+              );
+
+              window.requestAnimationFrame(() => {
+                if (flowInstanceRef.current && conflictNodes.length > 0) {
+                  void flowInstanceRef.current.fitView({
+                    nodes: conflictNodes,
+                    padding: 0.22,
+                    minZoom: 0.52,
+                    maxZoom: 0.96,
+                    duration: 720,
+                  });
+                }
+              });
+            }}
             onSelect={(index) => {
               setSelectedNode(null);
               setEvidenceFocusNodeId(null);
+              setIsConflictImmersive(false);
               setSelectedFaultLineIndex(index);
             }}
             onClose={() => {
               setEvidenceFocusNodeId(null);
+              setIsConflictImmersive(false);
               setSelectedFaultLineIndex(null);
               setIsFaultLineDetailsOpen(false);
-              setShowFaultLines(false)
+              setShowFaultLines(false);
             }}
           />
         )}

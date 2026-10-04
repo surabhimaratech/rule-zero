@@ -9,6 +9,8 @@ type Props = {
   onExpandedChange: (expanded: boolean) => void;
   onEvidenceFocus: (nodeId: string | null) => void;
   onEvidenceSelect: (nodeId: string) => void;
+  onTraceCauses: () => void;
+  onEnterConflict: () => void;
   onClose: () => void;
 };
 
@@ -21,6 +23,8 @@ export default function FaultLinePanel({
   onExpandedChange,
   onEvidenceFocus,
   onEvidenceSelect,
+  onTraceCauses,
+  onEnterConflict,
   onClose,
 }: Props) {
   if (!expanded) {
@@ -165,6 +169,13 @@ export default function FaultLinePanel({
             ))}
           </div>
         </section>
+
+        <div className="fault-line-article-actions">
+          <button onClick={onTraceCauses}>Trace causes</button>
+          <button className="primary" onClick={onEnterConflict}>
+            Enter conflict <span aria-hidden="true">→</span>
+          </button>
+        </div>
       </article>
     </aside>
   );
