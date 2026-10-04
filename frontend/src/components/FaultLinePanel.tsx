@@ -17,66 +17,47 @@ export default function FaultLinePanel({
   onExpandedChange,
   onClose,
 }: Props) {
-  const selectedFaultLine = selectedIndex === null
-    ? null
-    : faultLines[selectedIndex] ?? null;
-
   if (!expanded) {
     return (
-      <aside className="fault-line-lens">
+      <aside className="fault-line-lens fault-line-index">
         <button
           className="fault-line-close"
           onClick={onClose}
-          aria-label="Close fault line lens"
+          aria-label="Close Fault Lines"
         >
           ×
         </button>
 
-        <div className="fault-line-lens-heading">
-          <div className="eyebrow">FAULT LINE LENS</div>
-          <h2>Pressure in this world</h2>
-          <p>Select a conflict to reveal the branches feeding it.</p>
+        <div className="fault-line-index-heading">
+          <div className="eyebrow">FIELD GUIDE / FAULT LINES</div>
+          <h2>Where this world divides</h2>
+          <p>
+            Every changed reality creates winners, dissenters, and beliefs that
+            cannot peacefully coexist. Choose a division to investigate.
+          </p>
         </div>
 
-        <div className="fault-line-tabs" role="tablist" aria-label="Fault lines">
+        <div className="fault-line-index-list" aria-label="Fault line chapters">
           {faultLines.map((faultLine, index) => (
             <button
               key={`${faultLine.title}-${index}`}
-              role="tab"
-              aria-selected={selectedIndex === index}
-              onClick={() => onSelect(index)}
+              onClick={() => {
+                onSelect(index);
+                onExpandedChange(true);
+              }}
             >
-              <span>0{index + 1}</span>
-              {faultLine.title}
+              <span className="fault-line-index-number">0{index + 1}</span>
+              <span className="fault-line-index-copy">
+                <strong>{faultLine.title}</strong>
+                <small>{faultLine.tension}</small>
+                <i>
+                  {faultLine.factionA.name} <b>versus</b> {faultLine.factionB.name}
+                </i>
+              </span>
+              <span className="fault-line-index-arrow" aria-hidden="true">→</span>
             </button>
           ))}
         </div>
-
-        {selectedFaultLine && (
-          <div className="fault-line-lens-focus">
-            <p>{selectedFaultLine.tension}</p>
-            <div className="fault-line-lens-opposition">
-              <span className="faction-a-key">
-                {selectedFaultLine.factionA.name}
-              </span>
-              <i>versus</i>
-              <span className="faction-b-key">
-                {selectedFaultLine.factionB.name}
-              </span>
-            </div>
-            <div className="fault-line-lens-flashpoint">
-              <span>LIKELY FLASHPOINT</span>
-              <p>{selectedFaultLine.flashpoint}</p>
-            </div>
-          </div>
-        )}
-
-        <button
-          className="fault-line-expand"
-          onClick={() => onExpandedChange(true)}
-        >
-          Enter this conflict
-        </button>
       </aside>
     );
   }

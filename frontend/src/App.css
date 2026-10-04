@@ -2673,6 +2673,107 @@ button {
     line-height: 1.5;
   }
 
+  .fault-line-index-heading {
+    max-width: 470px;
+    padding: 8px 36px 26px 0;
+  }
+
+  .fault-line-index-heading h2 {
+    margin: 10px 0 12px;
+    color: #f0edf4;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(28px, 2.4vw, 38px);
+    font-weight: 400;
+    letter-spacing: -0.025em;
+    line-height: 1.05;
+  }
+
+  .fault-line-index-heading p {
+    margin: 0;
+    color: #9298a6;
+    font-size: 12px;
+    line-height: 1.7;
+  }
+
+  .fault-line-index-list {
+    border-top: 1px solid rgba(160, 169, 187, 0.16);
+  }
+
+  .fault-line-index-list > button {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) 22px;
+    align-items: start;
+    gap: 14px;
+    padding: 22px 4px;
+    border: 0;
+    border-bottom: 1px solid rgba(160, 169, 187, 0.13);
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background 180ms ease, padding 180ms ease;
+  }
+
+  .fault-line-index-list > button:hover {
+    padding-right: 10px;
+    padding-left: 10px;
+    background: linear-gradient(90deg, rgba(163, 130, 213, 0.1), transparent);
+  }
+
+  .fault-line-index-number {
+    padding-top: 3px;
+    color: #8e75b5;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 13px;
+  }
+
+  .fault-line-index-copy {
+    display: grid;
+    gap: 7px;
+  }
+
+  .fault-line-index-copy strong {
+    color: #e4e3e8;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 17px;
+    font-weight: 400;
+    line-height: 1.25;
+  }
+
+  .fault-line-index-copy small {
+    color: #9399a6;
+    font-size: 10px;
+    line-height: 1.55;
+  }
+
+  .fault-line-index-copy i {
+    color: #8c9db8;
+    font-size: 8px;
+    font-style: normal;
+    font-weight: 650;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .fault-line-index-copy i b {
+    margin: 0 4px;
+    color: #5f6674;
+    font-size: 7px;
+  }
+
+  .fault-line-index-arrow {
+    padding-top: 1px;
+    color: #75658e;
+    font-size: 16px;
+    transition: color 180ms ease, transform 180ms ease;
+  }
+
+  .fault-line-index-list > button:hover .fault-line-index-arrow {
+    color: #c1a7e5;
+    transform: translateX(4px);
+  }
+
   .fault-line-tabs {
     display: flex;
     gap: 7px;

@@ -486,7 +486,7 @@ export default function WorldGraph({
       setSelectedNode(null);
       setRewritePreviewNodeId(null);
       setShowEverydayObjects(false);
-      setSelectedFaultLineIndex(0);
+      setSelectedFaultLineIndex(null);
       setIsFaultLineDetailsOpen(false);
       setShowFaultLines(true);
       return;
@@ -516,7 +516,7 @@ export default function WorldGraph({
         await response.json();
 
       setFaultLines(data.faultLines);
-      setSelectedFaultLineIndex(data.faultLines.length > 0 ? 0 : null);
+      setSelectedFaultLineIndex(null);
       setIsFaultLineDetailsOpen(false);
       setShowFaultLines(true);
     } catch (err) {
@@ -1377,9 +1377,7 @@ export default function WorldGraph({
             onExpandedChange={setIsFaultLineDetailsOpen}
             onSelect={(index) => {
               setSelectedNode(null);
-              setSelectedFaultLineIndex(
-                selectedFaultLineIndex === index ? null : index
-              );
+              setSelectedFaultLineIndex(index);
             }}
             onClose={() => {
               setSelectedFaultLineIndex(null);
