@@ -62,141 +62,81 @@ export default function FaultLinePanel({
     );
   }
 
+  const faultLine = selectedIndex === null ? null : faultLines[selectedIndex];
+
+  if (!faultLine) {
+    return null;
+  }
+
+  const chapterNumber = (selectedIndex ?? 0) + 1;
+
   return (
-    <aside className="fault-line-panel">
+    <aside className="fault-line-panel fault-line-article">
       <button
         className="fault-line-close"
         onClick={onClose}
-        aria-label="Close fault line analysis"
+        aria-label="Close Fault Lines"
       >
         ×
       </button>
 
-      <div className="fault-line-header">
-        <button
-          className="fault-line-back"
-          onClick={() => onExpandedChange(false)}
-        >
-          ← Back to world lens
+      <article>
+        <button className="fault-line-back" onClick={() => onExpandedChange(false)}>
+          ← All fault lines
         </button>
 
-        <div className="eyebrow">
-          WORLD ANALYSIS / FAULT LINES
+        <header className="fault-line-article-header">
+          <div className="eyebrow">
+            FAULT LINES / {String(chapterNumber).padStart(2, "0")} OF{" "}
+            {String(faultLines.length).padStart(2, "0")}
+          </div>
+          <h2>{faultLine.title}</h2>
+          <p>{faultLine.tension}</p>
+        </header>
+
+        <div className="fault-line-article-divider" aria-hidden="true">
+          <span>THE DIVIDE</span>
         </div>
 
-        <h2>Ideological Fault Lines</h2>
-
-        <p>
-          These conflicts emerge from the world as it currently
-          exists.
-        </p>
-
-        <div className="fault-line-highlight-key">
-          <span className="faction-a-key">Faction A</span>
-          <span className="faction-b-key">Faction B</span>
-          <small>Click a card to highlight its supporting nodes.</small>
-        </div>
-      </div>
-
-      <div className="fault-line-list">
-        {faultLines.map((faultLine, index) => (
-          <article
-            className={`fault-line-card ${
-              selectedIndex === index ? "selected" : ""
-            }`}
-            key={`${faultLine.title}-${index}`}
-            role="button"
-            tabIndex={0}
-            aria-pressed={selectedIndex === index}
-            onClick={() => onSelect(index)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                onSelect(index);
-              }
-            }}
-          >
-            <div className="fault-line-number">
-              0{index + 1}
-            </div>
-
-            <h3>{faultLine.title}</h3>
-
-            <p className="fault-line-tension">
-              {faultLine.tension}
-            </p>
-
-            <div className="fault-line-factions">
-              <section className="fault-line-faction faction-a">
-                <span className="faction-label">
-                  FACTION A
-                </span>
-
-                <h4>{faultLine.factionA.name}</h4>
-
-                <p>{faultLine.factionA.belief}</p>
-
-                <details
-                  onClick={(event) => event.stopPropagation()}
-                  onKeyDown={(event) => event.stopPropagation()}
-                >
-                  <summary>View details</summary>
-
-                  <div className="faction-details">
-                    <p>
-                      <strong>Goal:</strong>{" "}
-                      {faultLine.factionA.goal}
-                    </p>
-
-                    <p>
-                      <strong>Fear:</strong>{" "}
-                      {faultLine.factionA.fear}
-                    </p>
-                  </div>
-                </details>
-              </section>
-
-              <div className="fault-line-versus">
-                VS
+        <div className="fault-line-article-factions">
+          <section className="fault-line-article-faction faction-a">
+            <span className="faction-label">FACTION A</span>
+            <h3>{faultLine.factionA.name}</h3>
+            <blockquote>{faultLine.factionA.belief}</blockquote>
+            <dl>
+              <div>
+                <dt>Seeks</dt>
+                <dd>{faultLine.factionA.goal}</dd>
               </div>
+              <div>
+                <dt>Fears</dt>
+                <dd>{faultLine.factionA.fear}</dd>
+              </div>
+            </dl>
+          </section>
 
-              <section className="fault-line-faction faction-b">
-                <span className="faction-label">
-                  FACTION B
-                </span>
+          <section className="fault-line-article-faction faction-b">
+            <span className="faction-label">FACTION B</span>
+            <h3>{faultLine.factionB.name}</h3>
+            <blockquote>{faultLine.factionB.belief}</blockquote>
+            <dl>
+              <div>
+                <dt>Seeks</dt>
+                <dd>{faultLine.factionB.goal}</dd>
+              </div>
+              <div>
+                <dt>Fears</dt>
+                <dd>{faultLine.factionB.fear}</dd>
+              </div>
+            </dl>
+          </section>
+        </div>
 
-                <h4>{faultLine.factionB.name}</h4>
-
-                <p>{faultLine.factionB.belief}</p>
-
-                <details
-                  onClick={(event) => event.stopPropagation()}
-                  onKeyDown={(event) => event.stopPropagation()}
-                >
-                  <summary>View details</summary>
-
-                  <div className="faction-details">
-                    <p>
-                      <strong>Goal:</strong>{" "}
-                      {faultLine.factionB.goal}
-                    </p>
-
-                    <p>
-                      <strong>Fear:</strong>{" "}
-                      {faultLine.factionB.fear}
-                    </p>
-                  </div>
-                </details>
-              </section>
-            </div>
-
-            <div className="fault-line-flashpoint">
-              <span>LIKELY FLASHPOINT</span>
-              <p>{faultLine.flashpoint}</p>
-            </div>
-          </article>
-        ))}
-      </div>
+        <section className="fault-line-article-flashpoint">
+          <span>PROJECTED FLASHPOINT</span>
+          <p>{faultLine.flashpoint}</p>
+        </section>
+      </article>
     </aside>
   );
 }

@@ -2990,6 +2990,163 @@ button {
     border-radius: 10px;
   }
 
+  .fault-line-article > article {
+    width: min(100%, 600px);
+    margin: 0 auto;
+    padding: 6px 0 44px;
+  }
+
+  .fault-line-article-header {
+    padding: 16px 0 30px;
+  }
+
+  .fault-line-article-header h2 {
+    margin: 12px 0 18px;
+    color: #f1eef3;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(32px, 3vw, 46px);
+    font-weight: 400;
+    letter-spacing: -0.035em;
+    line-height: 1.02;
+  }
+
+  .fault-line-article-header > p {
+    margin: 0;
+    color: #aaabb3;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 16px;
+    line-height: 1.58;
+  }
+
+  .fault-line-article-divider {
+    position: relative;
+    display: grid;
+    place-items: center;
+    height: 25px;
+    margin-bottom: 26px;
+  }
+
+  .fault-line-article-divider::before {
+    position: absolute;
+    right: 0;
+    left: 0;
+    height: 1px;
+    background: linear-gradient(90deg, #5278a5, #866b9c 50%, #9b5d9e);
+    content: "";
+    opacity: 0.52;
+  }
+
+  .fault-line-article-divider span {
+    position: relative;
+    padding: 5px 10px;
+    background: #10121a;
+    color: #777183;
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+  }
+
+  .fault-line-article-factions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 26px;
+  }
+
+  .fault-line-article-faction {
+    min-width: 0;
+  }
+
+  .fault-line-article-faction.faction-a {
+    padding-right: 24px;
+    border-right: 1px solid rgba(145, 156, 175, 0.15);
+  }
+
+  .fault-line-article-faction h3 {
+    margin: 9px 0 13px;
+    color: #e9e7ec;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 20px;
+    font-weight: 400;
+    line-height: 1.15;
+  }
+
+  .fault-line-article-faction blockquote {
+    margin: 0 0 20px;
+    color: #aeb0ba;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 13px;
+    font-style: italic;
+    line-height: 1.55;
+  }
+
+  .fault-line-article-faction dl {
+    display: grid;
+    gap: 15px;
+    margin: 0;
+  }
+
+  .fault-line-article-faction dl > div {
+    padding-top: 10px;
+    border-top: 1px solid rgba(145, 156, 175, 0.12);
+  }
+
+  .fault-line-article-faction dt {
+    margin-bottom: 5px;
+    color: #757d8c;
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .fault-line-article-faction dd {
+    margin: 0;
+    color: #989eaa;
+    font-size: 10px;
+    line-height: 1.55;
+  }
+
+  .fault-line-article-faction.faction-a .faction-label {
+    color: #80a9e3;
+  }
+
+  .fault-line-article-faction.faction-b .faction-label {
+    color: #c28ddd;
+  }
+
+  .fault-line-article-flashpoint {
+    position: relative;
+    margin-top: 34px;
+    padding: 22px 24px 22px 27px;
+    border: 1px solid rgba(195, 147, 83, 0.2);
+    background: linear-gradient(110deg, rgba(174, 123, 57, 0.11), rgba(119, 78, 132, 0.05));
+  }
+
+  .fault-line-article-flashpoint::before {
+    position: absolute;
+    top: -1px;
+    bottom: -1px;
+    left: -1px;
+    width: 3px;
+    background: #ae7f46;
+    content: "";
+  }
+
+  .fault-line-article-flashpoint span {
+    color: #ad8b5c;
+    font-size: 7px;
+    font-weight: 750;
+    letter-spacing: 0.17em;
+  }
+
+  .fault-line-article-flashpoint p {
+    margin: 9px 0 0;
+    color: #d0c7b9;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
   .fault-line-close {
     position: absolute;
     top: 14px;
