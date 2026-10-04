@@ -293,24 +293,24 @@ button {
 }
 
 .world-node {
-  width: 178px;
-  height: 178px;
-  border-radius: 50%;
+  width: 236px;
+  height: 142px;
+  border-radius: 14px;
 
   position: relative;
   overflow: visible;
   background:
-    radial-gradient(circle at 32% 22%, rgba(255, 255, 255, 0.08), transparent 32%),
-    linear-gradient(145deg, #171c27, #0d1119 78%);
+    radial-gradient(circle at 8% 0%, color-mix(in srgb, var(--domain-accent, #8790a3) 10%, transparent), transparent 42%),
+    linear-gradient(145deg, #151a24, #0c1017 82%);
   border: 1px solid color-mix(in srgb, var(--domain-accent, #3b4353) 62%, #202632);
 
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: flex-start;
 
-  padding: 28px;
-  text-align: center;
+  padding: 17px 18px 15px;
+  text-align: left;
 
   cursor: pointer;
 
@@ -332,10 +332,15 @@ button {
 .world-node-root {
   width: 232px;
   height: 232px;
+  border-radius: 50%;
   background: radial-gradient(circle at 35% 25%, #2b263b, #15131e 70%);
   border: 2px solid #aaa0bd;
   box-shadow: 0 0 0 7px rgba(170, 160, 189, 0.07),
     0 0 42px rgba(147, 123, 178, 0.18);
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  text-align: center;
 }
 
 .world-node-root::before {
@@ -348,9 +353,8 @@ button {
 }
 
 .world-node-domain {
-  margin-bottom: 8px;
-
-  font-size: 10px;
+  margin: 0;
+  font-size: 8px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
 
@@ -358,39 +362,67 @@ button {
 }
 
 .world-node-title {
-  max-width: 132px;
-  font-size: 14px;
-  line-height: 1.4;
+  max-width: none;
+  margin-top: 11px;
+  color: #eef0f4;
+  font-size: 15px;
+  line-height: 1.25;
   font-weight: 600;
 }
 
 .world-node-root .world-node-title {
   max-width: 174px;
+  margin-top: 0;
   font-size: 19px;
   line-height: 1.28;
 }
 
-.world-node-signal {
-  position: absolute;
-  bottom: 24px;
-  width: 24px;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--domain-accent, #8790a3);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--domain-accent, #8790a3) 75%, transparent);
-  opacity: 0.8;
+.world-node-root .world-node-domain {
+  margin-bottom: 8px;
+  font-size: 10px;
 }
 
-.world-node-signal span {
-  position: absolute;
-  top: 7px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: color-mix(in srgb, var(--domain-accent, #8790a3) 78%, #8b93a2);
+.consequence-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.consequence-card-state {
+  color: #697386;
   font-size: 7px;
   font-weight: 700;
-  letter-spacing: 0.13em;
-  white-space: nowrap;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.consequence-card-summary {
+  display: -webkit-box;
+  margin: 5px 0 0;
+  overflow: hidden;
+  color: #8992a2;
+  font-size: 9px;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.consequence-card-affordance {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 9px;
+  border-top: 1px solid rgba(136, 149, 171, 0.12);
+  color: #687386;
+  font-size: 8px;
+}
+
+.consequence-card-affordance i {
+  color: var(--domain-accent, #8790a3);
+  font-size: 12px;
+  font-style: normal;
 }
 
 .world-node-selected {
@@ -406,23 +438,29 @@ button {
 }
 
 .world-node-established {
-  border-width: 1.5px;
+  border-left: 3px solid color-mix(in srgb, var(--domain-accent, #8790a3) 70%, #303846);
 }
 
 .world-node-frontier {
-  width: 164px;
-  height: 164px;
-  border-style: dashed;
+  width: 236px;
+  height: 142px;
+  border-right-style: dashed;
   background:
-    radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--domain-accent, #8790a3) 8%, transparent), transparent 58%),
+    radial-gradient(circle at 100% 50%, color-mix(in srgb, var(--domain-accent, #8790a3) 10%, transparent), transparent 58%),
     linear-gradient(145deg, #141923, #0b0f16 78%);
 }
 
 .world-node-frontier::before {
   position: absolute;
-  inset: -9px;
-  border: 1px solid color-mix(in srgb, var(--domain-accent, #8790a3) 18%, transparent);
-  border-radius: 50%;
+  top: 50%;
+  right: -8px;
+  width: 14px;
+  height: 44px;
+  transform: translateY(-50%);
+  border-top: 1px solid color-mix(in srgb, var(--domain-accent, #8790a3) 35%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--domain-accent, #8790a3) 35%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--domain-accent, #8790a3) 35%, transparent);
+  border-radius: 0 8px 8px 0;
   content: "";
   opacity: 0.55;
   transition: opacity 160ms ease, transform 160ms ease;
@@ -430,11 +468,16 @@ button {
 
 .world-node-frontier:hover::before {
   opacity: 1;
-  transform: scale(1.04);
+  transform: translateY(-50%) translateX(3px);
 }
 
 .world-node-frontier .world-node-title {
-  font-size: 13px;
+  font-size: 15px;
+}
+
+.world-node-frontier .consequence-card-state,
+.world-node-frontier .consequence-card-affordance {
+  color: color-mix(in srgb, var(--domain-accent, #8790a3) 78%, #7d8798);
 }
 
 .node-quick-actions {
