@@ -180,6 +180,16 @@ button {
   background-size: 48px 48px;
 }
 
+.world-layout.field-guide-open {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(380px, 2fr);
+  overflow: hidden;
+}
+
+.field-guide-open .graph-container {
+  min-width: 0;
+}
+
 .graph-container {
   position: relative;
   width: 100%;
@@ -2832,6 +2842,38 @@ button {
 
     scrollbar-width: thin;
     scrollbar-color: #343b49 transparent;
+  }
+
+  .field-guide-open .fault-line-lens,
+  .field-guide-open .fault-line-panel {
+    position: relative;
+    top: auto;
+    right: auto;
+    z-index: 20;
+    width: auto;
+    max-height: none;
+    height: 100%;
+    padding: 34px 38px;
+    border-top: 0;
+    border-right: 0;
+    border-bottom: 0;
+    border-radius: 0;
+    background:
+      radial-gradient(circle at 12% 0%, rgba(150, 124, 197, 0.08), transparent 34%),
+      linear-gradient(180deg, rgba(17, 19, 27, 0.99), rgba(9, 11, 17, 0.99));
+    box-shadow: -24px 0 70px rgba(0, 0, 0, 0.34);
+    animation: field-guide-enter 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes field-guide-enter {
+    from {
+      opacity: 0;
+      transform: translateX(22px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
   }
 
   .fault-line-panel::-webkit-scrollbar {

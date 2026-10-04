@@ -824,6 +824,20 @@ export default function WorldGraph({
     return () => window.removeEventListener("keydown", handleShortcut);
   }, [selectedNode, selectedNodeHasChildren, showFaultLines]);
 
+  useEffect(() => {
+    if (!showFaultLines || !flowInstanceRef.current || !loadedGraphRef.current) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      if (flowInstanceRef.current && loadedGraphRef.current) {
+        frameWorldOrigin(flowInstanceRef.current, loadedGraphRef.current, 520);
+      }
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [showFaultLines]);
+
   const selectedPathIds = new Set<string>();
   const selectedPathNodes: Node<WorldNodeData>[] = [];
 
@@ -1141,7 +1155,7 @@ export default function WorldGraph({
         </div>
       )}
 
-      <div className="world-layout">
+      <div className={`world-layout${showFaultLines ? " field-guide-open" : ""}`}>
         <div className="graph-container">
           {currentWorld && !showFaultLines && (
             <div className="causal-depth-regions" aria-hidden="true">
