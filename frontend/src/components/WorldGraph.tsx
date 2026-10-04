@@ -593,6 +593,32 @@ export default function WorldGraph({
     selectedFaultLine?.factionB.supportingNodeIds ?? []
   );
 
+  function collectFactionPathIds(seedIds: Set<string>) {
+    const pathIds = new Set(seedIds);
+    const queue = [...seedIds];
+
+    while (queue.length > 0) {
+      const currentId = queue.shift()!;
+      const parentEdges = edges.filter((edge) => edge.target === currentId);
+
+      parentEdges.forEach((edge) => {
+        if (!pathIds.has(edge.source)) {
+          pathIds.add(edge.source);
+          queue.push(edge.source);
+        }
+      });
+    }
+
+    return pathIds;
+  }
+
+  const factionAPathIds = selectedFaultLine
+    ? collectFactionPathIds(factionANodeIds)
+    : new Set<string>();
+  const factionBPathIds = selectedFaultLine
+    ? collectFactionPathIds(factionBNodeIds)
+    : new Set<string>();
+
   if (selectedNode) {
     selectedPathIds.add(selectedNode.id);
     selectedPathNodes.unshift(selectedNode);
@@ -680,6 +706,18 @@ export default function WorldGraph({
 
       return {
         ...node,
+        position: selectedFaultLine
+          ? {
+              x: node.position.x,
+              y: node.position.y + (
+                supportsFactionA && !supportsFactionB
+                  ? -115
+                  : supportsFactionB && !supportsFactionA
+                    ? 115
+                    : 0
+              ),
+            }
+          : node.position,
         className: classNames.join(" ") || undefined,
       };
     }
@@ -701,11 +739,23 @@ export default function WorldGraph({
       typeof edge.data?.relationship === "string"
         ? edge.data.relationship
         : "";
+    const isFactionAPath =
+      factionAPathIds.has(edge.source) &&
+      factionAPathIds.has(edge.target);
+    const isFactionBPath =
+      factionBPathIds.has(edge.source) &&
+      factionBPathIds.has(edge.target);
 
     return {
       ...edge,
       className: selectedFaultLine
-        ? "graph-edge-dimmed"
+        ? isFactionAPath && isFactionBPath
+          ? "graph-edge-faction-both"
+          : isFactionAPath
+            ? "graph-edge-faction-a"
+            : isFactionBPath
+              ? "graph-edge-faction-b"
+              : "graph-edge-dimmed"
         : rewritePreviewNodeId
           ? willBeRewritten
             ? "graph-edge-will-rewrite"
@@ -872,6 +922,7 @@ export default function WorldGraph({
           )}
 
           <ReactFlow
+            className={selectedFaultLine ? "fault-line-flow" : undefined}
             nodes={displayedNodes}
             edges={displayedEdges}
             nodeTypes={nodeTypes}
@@ -893,6 +944,35 @@ export default function WorldGraph({
 
             <Controls />
           </ReactFlow>
+
+          {showFaultLines && selectedFaultLine && (
+            <div className="fault-line-stage" aria-hidden="true">
+              <div className="fault-line-territory faction-a-territory">
+                <div className="faction-standard">
+                  <span>FACTION</span>
+                  <strong>{selectedFaultLine.factionA.name}</strong>
+                  <p>{selectedFaultLine.factionA.belief}</p>
+                </div>
+              </div>
+
+              <div className="fault-line-stage-axis">
+                <span>IDEOLOGICAL FAULT LINE</span>
+              </div>
+
+              <div className="fault-line-territory faction-b-territory">
+                <div className="faction-standard">
+                  <span>FACTION</span>
+                  <strong>{selectedFaultLine.factionB.name}</strong>
+                  <p>{selectedFaultLine.factionB.belief}</p>
+                </div>
+              </div>
+
+              <div className="projected-flashpoint">
+                <span>PROJECTED FLASHPOINT</span>
+                <strong>{selectedFaultLine.flashpoint}</strong>
+              </div>
+            </div>
+          )}
         </div>
 
         {selectedNode && !showFaultLines && (

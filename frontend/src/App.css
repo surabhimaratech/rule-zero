@@ -398,6 +398,23 @@ button {
   transform: scale(1.07);
 }
 
+.graph-node-faction-both .world-node::after {
+  position: absolute;
+  top: -25px;
+  left: 50%;
+  padding: 4px 7px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(185, 151, 255, 0.48);
+  border-radius: 999px;
+  background: rgba(10, 13, 20, 0.94);
+  color: #cfb9ff;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+  content: "CONTESTED";
+}
+
 .world-node[data-domain="biology"] { --domain-accent: #78ad9a; }
 .world-node[data-domain="economics"] { --domain-accent: #c3a36e; }
 .world-node[data-domain="politics"] { --domain-accent: #b78a9b; }
@@ -652,6 +669,29 @@ button {
   stroke-width: 1.75;
   stroke-dasharray: 5 5;
   opacity: 0.58;
+}
+
+.graph-edge-faction-a .react-flow__edge-path {
+  stroke: #6aa4ff;
+  stroke-width: 1.8;
+  opacity: 0.7;
+}
+
+.graph-edge-faction-b .react-flow__edge-path {
+  stroke: #ca74ff;
+  stroke-width: 1.8;
+  opacity: 0.7;
+}
+
+.graph-edge-faction-both .react-flow__edge-path {
+  stroke: #b997ff;
+  stroke-width: 2;
+  stroke-dasharray: 7 5;
+  opacity: 0.8;
+}
+
+.fault-line-flow .react-flow__node {
+  transition: transform 520ms cubic-bezier(0.2, 0.75, 0.2, 1), opacity 220ms ease;
 }
 
 @keyframes causal-trace {
@@ -1840,6 +1880,135 @@ button {
 
   /* ---------- Fault Line Panel ---------- */
 
+  .fault-line-stage {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    overflow: hidden;
+    pointer-events: none;
+    animation: fault-line-stage-enter 520ms ease-out both;
+  }
+
+  .fault-line-territory {
+    position: absolute;
+    right: 0;
+    left: 0;
+    height: 48%;
+  }
+
+  .faction-a-territory {
+    top: 0;
+    background: linear-gradient(180deg, rgba(55, 111, 190, 0.11), transparent 76%);
+  }
+
+  .faction-b-territory {
+    bottom: 0;
+    background: linear-gradient(0deg, rgba(141, 61, 183, 0.11), transparent 76%);
+  }
+
+  .faction-standard {
+    position: absolute;
+    left: 70px;
+    width: min(280px, 28vw);
+    padding-left: 12px;
+  }
+
+  .faction-a-territory .faction-standard {
+    top: 22px;
+    border-left: 2px solid rgba(106, 164, 255, 0.72);
+  }
+
+  .faction-b-territory .faction-standard {
+    bottom: 22px;
+    border-left: 2px solid rgba(202, 116, 255, 0.72);
+  }
+
+  .faction-standard span {
+    display: block;
+    margin-bottom: 3px;
+    color: #707a8d;
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+  }
+
+  .faction-standard strong {
+    display: block;
+    overflow: hidden;
+    color: #e6e9ef;
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .faction-standard p {
+    margin: 3px 0 0;
+    overflow: hidden;
+    color: #8790a0;
+    font-size: 9px;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .fault-line-stage-axis {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    left: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 2%, rgba(185, 151, 255, 0.3) 20%, rgba(185, 151, 255, 0.7) 50%, rgba(185, 151, 255, 0.2) 78%, transparent);
+    box-shadow: 0 0 18px rgba(185, 151, 255, 0.18);
+  }
+
+  .fault-line-stage-axis span {
+    position: absolute;
+    top: -9px;
+    left: 70px;
+    padding: 3px 7px;
+    background: #0b0e15;
+    color: #887ca8;
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+  }
+
+  .projected-flashpoint {
+    position: absolute;
+    top: 50%;
+    left: 52%;
+    width: min(330px, 28vw);
+    padding: 11px 13px;
+    transform: translate(-50%, -50%);
+    border: 1px solid rgba(215, 167, 94, 0.3);
+    border-left: 3px solid rgba(215, 167, 94, 0.75);
+    border-radius: 8px;
+    background: rgba(13, 15, 21, 0.94);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.38), 0 0 24px rgba(215, 167, 94, 0.08);
+  }
+
+  .projected-flashpoint span {
+    display: block;
+    margin-bottom: 4px;
+    color: #b09264;
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+  }
+
+  .projected-flashpoint strong {
+    display: block;
+    color: #d8d2c8;
+    font-size: 10px;
+    font-weight: 550;
+    line-height: 1.4;
+  }
+
+  @keyframes fault-line-stage-enter {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
   .fault-line-lens {
     position: absolute;
     top: 20px;
@@ -2319,6 +2488,24 @@ button {
       right: 12px;
       width: calc(100vw - 24px);
       max-height: calc(100% - 24px);
+    }
+
+    .faction-standard {
+      left: 52px;
+      width: 42vw;
+    }
+
+    .faction-standard p {
+      display: none;
+    }
+
+    .fault-line-stage-axis span {
+      left: 52px;
+    }
+
+    .projected-flashpoint {
+      left: 50%;
+      width: min(260px, 62vw);
     }
 
     .fault-line-factions {
