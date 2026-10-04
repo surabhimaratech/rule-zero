@@ -71,8 +71,11 @@ type Props = {
   onWorldCreated: (worldId: string) => void;
 };
 
-const NODE_WIDTH = 210;
-const NODE_HEIGHT = 210;
+function getNodeDimensions(node: Node<WorldNodeData>) {
+  return node.data.nodeType === "rule"
+    ? { width: 240, height: 240 }
+    : { width: 244, height: 150 };
+}
 
 function layoutGraph(
   nodes: Node<WorldNodeData>[],
@@ -84,15 +87,14 @@ function layoutGraph(
 
   graph.setGraph({
     rankdir: "LR",
-    ranksep: 180,
-    nodesep: 96,
+    ranksep: 132,
+    nodesep: 54,
+    marginx: 36,
+    marginy: 36,
   });
 
   nodes.forEach((node) => {
-    graph.setNode(node.id, {
-      width: NODE_WIDTH,
-      height: NODE_HEIGHT,
-    });
+    graph.setNode(node.id, getNodeDimensions(node));
   });
 
   edges.forEach((edge) => {
@@ -103,12 +105,13 @@ function layoutGraph(
 
   return nodes.map((node) => {
     const position = graph.node(node.id);
+    const dimensions = getNodeDimensions(node);
 
     return {
       ...node,
       position: {
-        x: position.x - NODE_WIDTH / 2,
-        y: position.y - NODE_HEIGHT / 2,
+        x: position.x - dimensions.width / 2,
+        y: position.y - dimensions.height / 2,
       },
     };
   });
