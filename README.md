@@ -11,15 +11,20 @@ Worlds are persisted independently in Neo4j, so users can return to a simulated 
 - Define a foundational world rule
 - AI-generated first-order consequences
 - Expandable causal branches
+- Directed expansion through "What breaks?", "Who benefits?", and
+  "How does society adapt?"
 - Frontier and established-node states
 - Causal breadcrumbs and relationship labels
+- A paced world-ignition reveal for newly simulated realities
+- An origin-focused exploration camera with local branch framing
+- Readable causal cards and causal-depth regions
 - Persistent causal explanations
 - Alternate outcomes
 - Outcome rewrite previews
 - Downstream invalidation when assumptions change
 - AI-generated ideological fault lines
 - Persistent fault-line analysis with automatic cache invalidation
-- Faction A/B highlighting of supporting graph nodes
+- A graph-integrated faction conflict stage with supporting causal paths
 
 ## Tech stack
 
@@ -43,6 +48,19 @@ React -> Spring Boot -> OpenRouter
 The frontend calls the Spring Boot API. The backend uses OpenRouter for generation and Neo4j for graph persistence.
 
 Each `World` owns its `WorldNode` records through `HAS_NODE` relationships. Causal links remain `CAUSES` relationships between nodes in the same world.
+
+## Exploration model
+
+Rule Zero deliberately avoids presenting the world as a static database. A new
+reality ignites from its foundational truth and reveals first-order effects in
+sequence. The opening camera frames the origin and immediate consequences while
+deeper branches extend beyond the viewport. Selecting or expanding a consequence
+moves the camera into that local causal neighborhood, and **Return to origin**
+restores the opening frame.
+
+Unexplored consequences offer three causal directions rather than a generic
+continuation. Fault Lines reuse the graph as a conflict stage, separating the
+evidence behind opposing factions and projecting their likely flashpoint.
 
 ## Local setup
 
