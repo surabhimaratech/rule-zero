@@ -153,8 +153,6 @@ export default function WorldGraph({
     useState<string | null>(null);
   const [rewritePreviewNodeId, setRewritePreviewNodeId] =
     useState<string | null>(null);
-  const [isPremiseComposerOpen, setIsPremiseComposerOpen] =
-    useState(false);
   const [isFaultLineDetailsOpen, setIsFaultLineDetailsOpen] =
     useState(false);
   const [inquiryNodeId, setInquiryNodeId] =
@@ -268,7 +266,6 @@ export default function WorldGraph({
       setNewNodeIds(new Set());
       setRewrittenNodeId(null);
       setRewritePreviewNodeId(null);
-      setIsPremiseComposerOpen(false);
       setIsFaultLineDetailsOpen(false);
       setInquiryNodeId(null);
       setDetailIntent("default");
@@ -683,7 +680,6 @@ export default function WorldGraph({
         setShowFaultLines(false);
         setSelectedFaultLineIndex(null);
         setIsFaultLineDetailsOpen(false);
-        setIsPremiseComposerOpen(false);
         ignitionRunRef.current += 1;
         setShowIgnitionPrompt(false);
         setIgnitionVisibleIds(null);
@@ -960,24 +956,10 @@ export default function WorldGraph({
   });
 
   const currentWorld = worldId !== null;
-  const foundationalRule = nodes.find(
-    (node) => node.data.nodeType === "rule"
-  )?.data.title;
 
   return (
     <>
-      {currentWorld && !isPremiseComposerOpen ? (
-        <div className="world-context-bar">
-          <div className="world-context-orbit" aria-hidden="true" />
-          <div className="world-context-copy">
-            <span>FOUNDATIONAL TRUTH</span>
-            <strong>{foundationalRule ?? "Loading this reality…"}</strong>
-          </div>
-          <button onClick={() => setIsPremiseComposerOpen(true)}>
-            Start another reality
-          </button>
-        </div>
-      ) : (
+      {!currentWorld && (
       <div className="rule-input-container">
         <div className="rule-input-copy">
           <div className="rule-input-kicker">
@@ -1023,18 +1005,6 @@ export default function WorldGraph({
               : "Simulate world"}
           </button>
 
-          {currentWorld && (
-            <button
-              className="rule-input-cancel"
-              onClick={() => {
-                setRule("");
-                setIsPremiseComposerOpen(false);
-              }}
-              disabled={isCreating}
-            >
-              Cancel
-            </button>
-          )}
         </div>
       </div>
       )}

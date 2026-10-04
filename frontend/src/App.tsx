@@ -23,6 +23,7 @@ export default function App() {
   const [isComparing, setIsComparing] = useState(false);
   const [comparison, setComparison] = useState<WorldComparisonResult | null>(null);
   const [compareError, setCompareError] = useState<string | null>(null);
+  const currentWorld = worlds.find((world) => world.id === currentWorldId) ?? null;
 
   const refreshWorlds = useCallback(async () => {
     const response = await fetch(WORLDS_API);
@@ -199,21 +200,42 @@ export default function App() {
 
   return (
     <main className="app">
-      <header className="app-header">
-        <div className="brand-lockup">
-          <div className="eyebrow">CAUSAL WORLD SIMULATOR</div>
-          <h1>RULE ZERO</h1>
-          <p>Set the rules. Trace the consequences.</p>
-        </div>
+      <header className={`app-header${currentWorld ? " app-header-world" : ""}`}>
+        {currentWorld ? (
+          <>
+            <div className="active-world-brand">RULE ZERO</div>
+            <div className="active-world-premise">
+              <span className="world-context-orbit" aria-hidden="true" />
+              <div>
+                <span>FOUNDATIONAL TRUTH</span>
+                <strong>{currentWorld.rootRule}</strong>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="brand-lockup">
+            <div className="eyebrow">CAUSAL WORLD SIMULATOR</div>
+            <h1>RULE ZERO</h1>
+            <p>Set the rules. Trace the consequences.</p>
+          </div>
+        )}
 
-        <button
-          className="worlds-trigger"
-          onClick={() => setIsLibraryOpen(true)}
-        >
-          <span className="worlds-trigger-dot" />
-          My Worlds
-          <span className="world-count">{worlds.length}</span>
-        </button>
+        <div className="app-header-actions">
+          <button
+            className="worlds-trigger"
+            onClick={() => setIsLibraryOpen(true)}
+          >
+            <span className="worlds-trigger-dot" />
+            My Worlds
+            <span className="world-count">{worlds.length}</span>
+          </button>
+
+          {currentWorld && (
+            <button className="new-reality-trigger" onClick={startNewWorld}>
+              Start another reality
+            </button>
+          )}
+        </div>
       </header>
 
       <WorldGraph
