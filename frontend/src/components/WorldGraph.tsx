@@ -597,6 +597,12 @@ export default function WorldGraph({
         );
         setInquiryNodeId(null);
 
+        window.requestAnimationFrame(() => {
+          if (flowInstanceRef.current) {
+            frameNodeNeighborhood(flowInstanceRef.current, refreshed, nodeId);
+          }
+        });
+
         window.setTimeout(() => setNewNodeIds(new Set()), 12000);
       }
 
@@ -765,6 +771,10 @@ export default function WorldGraph({
         ignitionRunRef.current += 1;
         setShowIgnitionPrompt(false);
         setIgnitionVisibleIds(null);
+
+        if (flowInstanceRef.current && loadedGraphRef.current) {
+          frameWorldOrigin(flowInstanceRef.current, loadedGraphRef.current, 420);
+        }
         return;
       }
 
@@ -1105,6 +1115,24 @@ export default function WorldGraph({
 
       <div className="world-layout">
         <div className="graph-container">
+          {currentWorld && !ignitionVisibleIds && (
+            <button
+              className="return-to-origin"
+              onClick={() => {
+                setSelectedNode(null);
+                setInquiryNodeId(null);
+                setRewritePreviewNodeId(null);
+
+                if (flowInstanceRef.current && loadedGraphRef.current) {
+                  frameWorldOrigin(flowInstanceRef.current, loadedGraphRef.current, 420);
+                }
+              }}
+            >
+              <span aria-hidden="true">◎</span>
+              Return to origin
+            </button>
+          )}
+
           {currentWorld && !showFaultLines && (
             <div className="world-analysis-launcher">
               <span className="world-analysis-label">

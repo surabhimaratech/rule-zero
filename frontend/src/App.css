@@ -186,6 +186,34 @@ button {
   height: 100%;
 }
 
+.return-to-origin {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  z-index: 9;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border: 1px solid rgba(136, 149, 171, 0.2);
+  border-radius: 8px;
+  background: rgba(10, 13, 19, 0.84);
+  color: #8791a2;
+  font-size: 9px;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+}
+
+.return-to-origin:hover {
+  border-color: rgba(169, 148, 198, 0.45);
+  color: #dce1e9;
+}
+
+.return-to-origin span {
+  color: #a994c6;
+  font-size: 13px;
+}
+
 .world-ignition {
   position: absolute;
   inset: 0;
