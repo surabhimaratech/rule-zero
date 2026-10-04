@@ -55,7 +55,8 @@ public class WorldService {
                     title: $title,
                     description: $description,
                     domain: $domain,
-                    nodeType: $nodeType
+                    nodeType: $nodeType,
+                    generationOrder: -1
                 })
                 CREATE (world)-[:HAS_NODE]->(root)
                 """)
@@ -71,6 +72,8 @@ public class WorldService {
                 .bind("rule").to("nodeType")
                 .run();
 
+        int consequenceOrder = 0;
+
         for (GeneratedConsequence consequence : generated.consequences()) {
             String consequenceId = UUID.randomUUID().toString();
 
@@ -82,7 +85,8 @@ public class WorldService {
                         title: $title,
                         description: $description,
                         domain: $domain,
-                        nodeType: $nodeType
+                        nodeType: $nodeType,
+                        generationOrder: $generationOrder
                     })
                     CREATE (world)-[:HAS_NODE]->(child)
                     CREATE (root)-[:CAUSES]->(child)
@@ -94,6 +98,7 @@ public class WorldService {
                     .bind(consequence.description()).to("description")
                     .bind(consequence.domain()).to("domain")
                     .bind("consequence").to("nodeType")
+                    .bind(consequenceOrder++).to("generationOrder")
                     .run();
         }
 
@@ -435,6 +440,10 @@ public class WorldService {
                             node.description AS description,
                             node.domain AS domain,
                             node.nodeType AS nodeType
+                        ORDER BY
+                            CASE node.nodeType WHEN 'rule' THEN 0 ELSE 1 END,
+                            coalesce(node.generationOrder, 999999),
+                            node.title
                         """)
                         .bind(worldId).to("worldId")
                         .fetchAs(GraphResponse.GraphNode.class)
@@ -479,6 +488,10 @@ public class WorldService {
     }
 
     public void expandNode(String worldId, String nodeId) {
+        expandNode(worldId, nodeId, null);
+    }
+
+    public void expandNode(String worldId, String nodeId, String direction) {
         Map<String, Object> parent = getOwnedNode(worldId, nodeId);
 
         boolean alreadyExpanded = neo4jClient.query("""
@@ -503,8 +516,22 @@ public class WorldService {
                 ? ""
                 : parent.get("description").toString();
 
-        GeneratedWorldResponse generated =
-                openRouterService.generateNextConsequences(title, description);
+        String normalizedDirection = switch (
+                direction == null ? "" : direction.trim().toLowerCase()
+        ) {
+            case "breaks" -> "what breaks, fails, or becomes unsustainable";
+            case "benefits" -> "who benefits, gains power, or finds opportunity";
+            case "adapts" -> "how society, institutions, or culture adapts";
+            default -> null;
+        };
+
+        GeneratedWorldResponse generated = normalizedDirection == null
+                ? openRouterService.generateNextConsequences(title, description)
+                : openRouterService.generateNextConsequences(
+                        title,
+                        description,
+                        normalizedDirection
+                );
 
         for (GeneratedConsequence consequence : generated.consequences()) {
             String consequenceId = UUID.randomUUID().toString();

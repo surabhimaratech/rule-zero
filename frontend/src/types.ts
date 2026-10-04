@@ -1,9 +1,23 @@
+export type InquiryDirection = "breaks" | "benefits" | "adapts";
+
+export type WorldNodeActions = {
+  canExpand: boolean;
+  canRewrite: boolean;
+  isBusy: boolean;
+  showInquiry: boolean;
+  onTrace: () => void;
+  onContinue: () => void;
+  onRewrite: () => void;
+  onExpand: (direction: InquiryDirection) => void;
+};
+
 export type WorldNodeData = {
   title: string;
   description: string;
   domain: string;
   nodeType: "rule" | "consequence";
   explorationState?: "origin" | "established" | "frontier";
+  actions?: WorldNodeActions;
 };
 
 export type OutcomeAlternative = {

@@ -78,9 +78,14 @@ public class WorldController {
     @PostMapping("/{worldId}/nodes/{nodeId}/expand")
     public void expandNode(
             @PathVariable String worldId,
-            @PathVariable String nodeId
+            @PathVariable String nodeId,
+            @RequestBody(required = false) ExpandNodeRequest request
     ) {
-        worldService.expandNode(worldId, nodeId);
+        worldService.expandNode(
+                worldId,
+                nodeId,
+                request == null ? null : request.direction()
+        );
     }
 
     @GetMapping("/{worldId}/nodes/{nodeId}/why")

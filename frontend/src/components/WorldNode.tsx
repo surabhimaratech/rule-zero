@@ -10,6 +10,11 @@ export default function WorldNode({
   const isEstablished = data.explorationState === "established";
   const domainClass = data.domain.toLowerCase().replaceAll(" ", "-");
 
+  function runAction(event: React.MouseEvent, action: () => void) {
+    event.stopPropagation();
+    action();
+  }
+
   return (
     <div
       className={`world-node ${
@@ -40,6 +45,50 @@ export default function WorldNode({
         position={Position.Right}
         className="world-handle"
       />
+
+      {selected && data.actions && (
+        <div className="node-quick-actions nodrag nopan" onClick={(event) => event.stopPropagation()}>
+          <div className="node-quick-actions-primary">
+            <button
+              onClick={(event) => runAction(event, data.actions!.onTrace)}
+              disabled={!data.actions.canRewrite}
+              title="Trace why this happened (T)"
+            >
+              Trace why
+            </button>
+            <button
+              className="continue-action"
+              onClick={(event) => runAction(event, data.actions!.onContinue)}
+              disabled={!data.actions.canExpand || data.actions.isBusy}
+              title="Continue this branch (E)"
+            >
+              Continue <kbd>E</kbd>
+            </button>
+            <button
+              onClick={(event) => runAction(event, data.actions!.onRewrite)}
+              disabled={!data.actions.canRewrite}
+              title="Rewrite this outcome (W)"
+            >
+              Rewrite <kbd>W</kbd>
+            </button>
+          </div>
+
+          {data.actions.showInquiry && data.actions.canExpand && (
+            <div className="node-inquiry-menu">
+              <span>FOLLOW THIS CONSEQUENCE</span>
+              <button onClick={(event) => runAction(event, () => data.actions!.onExpand("breaks"))}>
+                What breaks?
+              </button>
+              <button onClick={(event) => runAction(event, () => data.actions!.onExpand("benefits"))}>
+                Who benefits?
+              </button>
+              <button onClick={(event) => runAction(event, () => data.actions!.onExpand("adapts"))}>
+                How does society adapt?
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

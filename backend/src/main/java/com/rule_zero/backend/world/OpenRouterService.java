@@ -44,6 +44,8 @@ public class OpenRouterService {
                 Do not create a full story.
                 Do not jump many causal steps ahead.
                 Each consequence must directly follow from the rule.
+                Order the consequences from the most immediate and expected
+                to the most surprising while remaining causally plausible.
 
                 Return ONLY valid JSON in this exact shape:
 
@@ -108,6 +110,18 @@ public class OpenRouterService {
         String parentTitle,
         String parentDescription
         ) {
+        return generateNextConsequences(
+                parentTitle,
+                parentDescription,
+                "the most materially important next changes"
+        );
+        }
+
+    public GeneratedWorldResponse generateNextConsequences(
+        String parentTitle,
+        String parentDescription,
+        String direction
+        ) {
         String prompt = """
                 You are simulating a fictional world through cause and effect.
 
@@ -121,6 +135,9 @@ public class OpenRouterService {
 
                 Generate exactly 3 direct consequences that would plausibly
                 follow from THIS condition.
+
+                Focus this expansion on:
+                %s
 
                 Important:
                 - Generate only the next causal step.
@@ -140,7 +157,7 @@ public class OpenRouterService {
                         }
                 ]
                 }
-                """.formatted(parentTitle, parentDescription);
+                """.formatted(parentTitle, parentDescription, direction);
 
         Map<String, Object> body = Map.of(
                 "model", "openai/gpt-4.1-mini",

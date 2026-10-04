@@ -2,6 +2,7 @@ import {
   startTransition,
   useCallback,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import {
@@ -21,6 +22,7 @@ import "@xyflow/react/dist/style.css";
 import type {
   FaultLine,
   FaultLineResponse,
+  InquiryDirection,
   OutcomeAlternative,
   WorldNodeData,
 } from "../types";
@@ -155,6 +157,18 @@ export default function WorldGraph({
     useState(false);
   const [isFaultLineDetailsOpen, setIsFaultLineDetailsOpen] =
     useState(false);
+  const [inquiryNodeId, setInquiryNodeId] =
+    useState<string | null>(null);
+  const [detailIntent, setDetailIntent] =
+    useState<"default" | "explain" | "rewrite">("default");
+  const [detailIntentNonce, setDetailIntentNonce] = useState(0);
+  const [ignitionVisibleIds, setIgnitionVisibleIds] =
+    useState<Set<string> | null>(null);
+  const [ignitionActiveNodeId, setIgnitionActiveNodeId] =
+    useState<string | null>(null);
+  const [showIgnitionPrompt, setShowIgnitionPrompt] = useState(false);
+  const shouldIgniteRef = useRef(false);
+  const ignitionRunRef = useRef(0);
 
   const loadGraph = useCallback(
     async (
@@ -243,6 +257,8 @@ export default function WorldGraph({
   );
 
   useEffect(() => {
+    const ignitionRun = ++ignitionRunRef.current;
+
     startTransition(() => {
       setSelectedNode(null);
       setShowFaultLines(false);
@@ -254,6 +270,11 @@ export default function WorldGraph({
       setRewritePreviewNodeId(null);
       setIsPremiseComposerOpen(false);
       setIsFaultLineDetailsOpen(false);
+      setInquiryNodeId(null);
+      setDetailIntent("default");
+      setIgnitionVisibleIds(null);
+      setIgnitionActiveNodeId(null);
+      setShowIgnitionPrompt(false);
     });
 
     if (!worldId) {
@@ -266,10 +287,61 @@ export default function WorldGraph({
       return;
     }
 
-    loadGraph(worldId).catch((err) => {
-      console.error(err);
-      setError("Could not load this world.");
-    });
+    loadGraph(worldId)
+      .then((graph) => {
+        if (!shouldIgniteRef.current) {
+          return;
+        }
+
+        shouldIgniteRef.current = false;
+
+        const rootNode = graph.nodes.find(
+          (node) => node.data.nodeType === "rule"
+        );
+        const consequences = graph.nodes.filter(
+          (node) => node.data.nodeType !== "rule"
+        );
+
+        if (!rootNode || consequences.length === 0) {
+          return;
+        }
+
+        const visibleIds = new Set([rootNode.id]);
+        setIgnitionVisibleIds(new Set(visibleIds));
+        setIgnitionActiveNodeId(rootNode.id);
+
+        consequences.forEach((node, index) => {
+          window.setTimeout(() => {
+            if (ignitionRunRef.current !== ignitionRun) {
+              return;
+            }
+
+            visibleIds.add(node.id);
+            setIgnitionVisibleIds(new Set(visibleIds));
+            setIgnitionActiveNodeId(node.id);
+          }, 420 * (index + 1));
+        });
+
+        window.setTimeout(() => {
+          if (ignitionRunRef.current !== ignitionRun) {
+            return;
+          }
+
+          setIgnitionActiveNodeId(consequences.at(-1)?.id ?? null);
+          setShowIgnitionPrompt(true);
+        }, 420 * consequences.length + 520);
+      })
+      .catch((err) => {
+        shouldIgniteRef.current = false;
+        console.error(err);
+        setError("Could not load this world.");
+      });
+
+    return () => {
+      if (ignitionRunRef.current === ignitionRun) {
+        ignitionRunRef.current += 1;
+      }
+    };
   }, [loadGraph, setEdges, setNodes, worldId]);
 
   async function createWorld() {
@@ -303,6 +375,7 @@ export default function WorldGraph({
       const data: { worldId: string } =
         await response.json();
 
+      shouldIgniteRef.current = true;
       onWorldCreated(data.worldId);
       setRule("");
     } catch (err) {
@@ -410,7 +483,10 @@ export default function WorldGraph({
     return data.explanation ?? null;
   }
 
-  async function expandNode(nodeId: string) {
+  async function expandNode(
+    nodeId: string,
+    direction: InquiryDirection
+  ) {
     if (isExpanding) {
       return;
     }
@@ -423,6 +499,10 @@ export default function WorldGraph({
         `http://localhost:8080/api/worlds/${worldId}/nodes/${nodeId}/expand`,
         {
           method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ direction }),
         }
       );
 
@@ -446,6 +526,7 @@ export default function WorldGraph({
         setSelectedNode(
           refreshed.nodes.find((node) => node.id === nodeId) ?? null
         );
+        setInquiryNodeId(null);
 
         window.setTimeout(() => setNewNodeIds(new Set()), 12000);
       }
@@ -461,7 +542,7 @@ export default function WorldGraph({
       console.error(err);
 
       setError(
-        "Could not explore what happens next."
+        "This causal path could not be traced."
       );
     } finally {
       setIsExpanding(false);
@@ -563,6 +644,12 @@ export default function WorldGraph({
       setShowFaultLines(false);
       setSelectedFaultLineIndex(null);
       setRewritePreviewNodeId(null);
+      setInquiryNodeId(null);
+      setDetailIntent("default");
+      ignitionRunRef.current += 1;
+      setIgnitionVisibleIds(null);
+      setIgnitionActiveNodeId(null);
+      setShowIgnitionPrompt(false);
 
       setSelectedNode(
         node as Node<WorldNodeData>
@@ -577,6 +664,55 @@ export default function WorldGraph({
       (edge) =>
         edge.source === selectedNode.id
     );
+
+  useEffect(() => {
+    function handleShortcut(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+
+      if (
+        target?.matches("input, textarea, select") ||
+        target?.isContentEditable
+      ) {
+        return;
+      }
+
+      if (event.key === "Escape") {
+        setSelectedNode(null);
+        setRewritePreviewNodeId(null);
+        setInquiryNodeId(null);
+        setShowFaultLines(false);
+        setSelectedFaultLineIndex(null);
+        setIsFaultLineDetailsOpen(false);
+        setIsPremiseComposerOpen(false);
+        ignitionRunRef.current += 1;
+        setShowIgnitionPrompt(false);
+        setIgnitionVisibleIds(null);
+        return;
+      }
+
+      if (!selectedNode || showFaultLines) {
+        return;
+      }
+
+      if (event.key.toLowerCase() === "e" && !selectedNodeHasChildren) {
+        event.preventDefault();
+        setInquiryNodeId(selectedNode.id);
+      }
+
+      if (
+        event.key.toLowerCase() === "w" &&
+        selectedNode.data.nodeType !== "rule"
+      ) {
+        event.preventDefault();
+        setRewritePreviewNodeId(selectedNode.id);
+        setDetailIntent("rewrite");
+        setDetailIntentNonce((value) => value + 1);
+      }
+    }
+
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  }, [selectedNode, selectedNodeHasChildren, showFaultLines]);
 
   const selectedPathIds = new Set<string>();
   const selectedPathNodes: Node<WorldNodeData>[] = [];
@@ -704,8 +840,42 @@ export default function WorldGraph({
         classNames.push("graph-node-rewritten");
       }
 
+      if (ignitionVisibleIds && !ignitionVisibleIds.has(node.id)) {
+        classNames.push("graph-node-ignition-hidden");
+      }
+
+      if (ignitionActiveNodeId === node.id) {
+        classNames.push("graph-node-ignition-active");
+      }
+
       return {
         ...node,
+        data: {
+          ...node.data,
+          actions: selectedNode?.id === node.id
+            ? {
+                canExpand: !edges.some((edge) => edge.source === node.id),
+                canRewrite: node.data.nodeType !== "rule",
+                isBusy: isExpanding,
+                showInquiry: inquiryNodeId === node.id,
+                onTrace: () => {
+                  setDetailIntent("explain");
+                  setDetailIntentNonce((value) => value + 1);
+                },
+                onContinue: () => {
+                  setInquiryNodeId((current) => current === node.id ? null : node.id);
+                },
+                onRewrite: () => {
+                  setRewritePreviewNodeId(node.id);
+                  setDetailIntent("rewrite");
+                  setDetailIntentNonce((value) => value + 1);
+                },
+                onExpand: (direction: InquiryDirection) => {
+                  void expandNode(node.id, direction);
+                },
+              }
+            : undefined,
+        },
         position: selectedFaultLine
           ? {
               x: node.position.x,
@@ -739,6 +909,9 @@ export default function WorldGraph({
       typeof edge.data?.relationship === "string"
         ? edge.data.relationship
         : "";
+    const isIgnitionEdgeHidden = Boolean(
+      ignitionVisibleIds && !ignitionVisibleIds.has(edge.target)
+    );
     const isFactionAPath =
       factionAPathIds.has(edge.source) &&
       factionAPathIds.has(edge.target);
@@ -748,7 +921,9 @@ export default function WorldGraph({
 
     return {
       ...edge,
-      className: selectedFaultLine
+      className: isIgnitionEdgeHidden
+        ? "graph-edge-ignition-hidden"
+        : selectedFaultLine
         ? isFactionAPath && isFactionBPath
           ? "graph-edge-faction-both"
           : isFactionAPath
@@ -799,7 +974,7 @@ export default function WorldGraph({
             <strong>{foundationalRule ?? "Loading this reality…"}</strong>
           </div>
           <button onClick={() => setIsPremiseComposerOpen(true)}>
-            Create another world
+            Start another reality
           </button>
         </div>
       ) : (
@@ -844,7 +1019,7 @@ export default function WorldGraph({
             }
           >
             {isCreating
-              ? "Simulating..."
+              ? "Establishing reality…"
               : "Simulate world"}
           </button>
 
@@ -893,7 +1068,7 @@ export default function WorldGraph({
                 }
               >
                 {isAnalyzingFaultLines
-                  ? "Analyzing..."
+                  ? "Finding where society divides…"
                   : faultLines.length > 0
                     ? "View Fault Lines"
                     : "Find Fault Lines"}
@@ -945,6 +1120,39 @@ export default function WorldGraph({
             <Controls />
           </ReactFlow>
 
+          {ignitionVisibleIds && (
+            <div className="world-ignition" aria-live="polite">
+              <button
+                className="world-ignition-skip"
+                onClick={() => {
+                  ignitionRunRef.current += 1;
+                  setIgnitionVisibleIds(null);
+                  setIgnitionActiveNodeId(null);
+                  setShowIgnitionPrompt(false);
+                }}
+              >
+                Skip reveal
+              </button>
+
+              {ignitionActiveNodeId && !showIgnitionPrompt && (
+                <div className="world-ignition-causal-note">
+                  <span>REALITY PROPAGATES</span>
+                  <p>
+                    {nodes.find((node) => node.id === ignitionActiveNodeId)?.data.description}
+                  </p>
+                </div>
+              )}
+
+              {showIgnitionPrompt && (
+                <div className="world-ignition-prompt">
+                  <span>THE WORLD HAS BEGUN</span>
+                  <strong>Which consequence should reality follow?</strong>
+                  <p>Select an unexplored consequence to continue its branch.</p>
+                </div>
+              )}
+            </div>
+          )}
+
           {showFaultLines && selectedFaultLine && (
             <div className="fault-line-stage" aria-hidden="true">
               <div className="fault-line-territory faction-a-territory">
@@ -977,7 +1185,7 @@ export default function WorldGraph({
 
         {selectedNode && !showFaultLines && (
           <NodeDetails
-            key={`${selectedNode.id}-${selectedNode.data.title}-${selectedNode.data.description}`}
+            key={`${selectedNode.id}-${selectedNode.data.title}-${selectedNode.data.description}-${detailIntentNonce}`}
             node={selectedNode}
             onClose={() => {
               setSelectedNode(null);
@@ -1006,6 +1214,7 @@ export default function WorldGraph({
                 isPreviewing ? selectedNode.id : null
               );
             }}
+            initialMode={detailIntent}
             isExpanding={isExpanding}
             hasChildren={
               selectedNodeHasChildren

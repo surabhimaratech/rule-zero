@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Node } from "@xyflow/react";
 import type {
+  InquiryDirection,
   OutcomeAlternative,
   WorldNodeData,
 } from "../types";
@@ -8,7 +9,7 @@ import type {
 type Props = {
   node: Node<WorldNodeData>;
   onClose: () => void;
-  onExpand: (nodeId: string) => Promise<void>;
+  onExpand: (nodeId: string, direction: InquiryDirection) => Promise<void>;
   onExplain: (nodeId: string) => Promise<string>;
   onLoadExplanation: (nodeId: string) => Promise<string | null>;
   onChangeOutcome: (
@@ -24,6 +25,7 @@ type Props = {
   onFocusNode: (nodeId: string) => void;
   rewriteDescendantCount: number;
   onRewritePreviewChange: (isPreviewing: boolean) => void;
+  initialMode?: "default" | "explain" | "rewrite";
 };
 
 export default function NodeDetails({
@@ -40,6 +42,7 @@ export default function NodeDetails({
   onFocusNode,
   rewriteDescendantCount,
   onRewritePreviewChange,
+  initialMode = "default",
 }: Props) {
   const [explanation, setExplanation] =
     useState<string | null>(null);
@@ -54,7 +57,7 @@ export default function NodeDetails({
     useState<string | null>(null);
 
   const [isEditing, setIsEditing] =
-    useState(false);
+    useState(initialMode === "rewrite");
 
   const [editTitle, setEditTitle] =
     useState(node.data.title);
@@ -95,7 +98,17 @@ export default function NodeDetails({
           await onLoadExplanation(node.id);
 
         if (!cancelled) {
-          setExplanation(existing);
+          if (existing) {
+            setExplanation(existing);
+          } else if (initialMode === "explain") {
+            setIsExplaining(true);
+            const generated = await onExplain(node.id);
+
+            if (!cancelled) {
+              setExplanation(generated);
+              setIsExplaining(false);
+            }
+          }
         }
       } catch (error) {
         console.error(error);
@@ -115,6 +128,8 @@ export default function NodeDetails({
     node.id,
     node.data.nodeType,
     onLoadExplanation,
+    onExplain,
+    initialMode,
   ]);
 
   async function handleExplain() {
@@ -218,6 +233,7 @@ export default function NodeDetails({
       <button
         className="close-button"
         onClick={onClose}
+        title="Close (Esc)"
       >
         ×
       </button>
@@ -302,27 +318,39 @@ export default function NodeDetails({
               {isRoot
                 ? "Foundational rule"
                 : isExplaining
-                  ? "Explaining..."
+                  ? "Tracing causal chain…"
                   : explanation
                     ? "Explain again"
                     : "Why did this happen?"}
             </button>
 
-            <button
-              className="detail-action-expand"
-              onClick={() =>
-                void onExpand(node.id)
-              }
-              disabled={
-                isExpanding || hasChildren
-              }
-            >
-              {isExpanding
-                ? "Exploring..."
-                : hasChildren
-                  ? "Already explored"
-                  : "What happens next?"}
-            </button>
+            {hasChildren ? (
+              <button className="detail-action-expand" disabled>
+                Already explored
+              </button>
+            ) : (
+              <div className="detail-inquiry-actions">
+                <span>Continue this branch</span>
+                <button
+                  onClick={() => void onExpand(node.id, "breaks")}
+                  disabled={isExpanding}
+                >
+                  {isExpanding ? "Tracing consequences…" : "What breaks?"}
+                </button>
+                <button
+                  onClick={() => void onExpand(node.id, "benefits")}
+                  disabled={isExpanding}
+                >
+                  Who benefits?
+                </button>
+                <button
+                  onClick={() => void onExpand(node.id, "adapts")}
+                  disabled={isExpanding}
+                >
+                  How does society adapt?
+                </button>
+              </div>
+            )}
 
             <button
               className="detail-action-change"
@@ -376,7 +404,7 @@ export default function NodeDetails({
                 }
               >
                 {isLoadingAlternatives
-                  ? "Exploring alternatives..."
+                  ? "Searching nearby realities…"
                   : "Suggest alternatives"}
               </button>
 

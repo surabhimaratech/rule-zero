@@ -189,7 +189,8 @@ class WorldServiceTest {
                 .thenReturn(Optional.of(false));
         when(openRouterService.generateNextConsequences(
                 "Parent outcome",
-                "Parent description"
+                "Parent description",
+                "what breaks, fails, or becomes unsustainable"
         )).thenReturn(new GeneratedWorldResponse(List.of(
                 new GeneratedConsequence(
                         "Child outcome",
@@ -198,7 +199,13 @@ class WorldServiceTest {
                 )
         )));
 
-        worldService.expandNode(WORLD_ID, NODE_ID);
+        worldService.expandNode(WORLD_ID, NODE_ID, "breaks");
+
+        verify(openRouterService).generateNextConsequences(
+                "Parent outcome",
+                "Parent description",
+                "what breaks, fails, or becomes unsustainable"
+        );
 
         verify(neo4jClient, times(1)).query(argThat((String query) ->
                 query != null

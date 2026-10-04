@@ -75,7 +75,7 @@ export default function FaultLinePanel({
           className="fault-line-expand"
           onClick={() => onExpandedChange(true)}
         >
-          Open full analysis
+          Enter this conflict
         </button>
       </aside>
     );
