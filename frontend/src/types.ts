@@ -84,3 +84,16 @@ export type FaultLine = {
 export type FaultLineResponse = {
   faultLines: FaultLine[];
 };
+
+export type EverydayObject = {
+  name: string;
+  description: string;
+  before: string;
+  now: string;
+  whyItChanged: string;
+  supportingNodeIds: string[];
+};
+
+export type EverydayObjectsResponse = {
+  objects: EverydayObject[];
+};

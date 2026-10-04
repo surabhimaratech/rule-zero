@@ -8,7 +8,9 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class WorldService {
@@ -723,7 +725,9 @@ public class WorldService {
                 MATCH (world:World {id: $worldId})
                 REMOVE
                     world.faultLinesJson,
-                    world.faultLinesGeneratedAt
+                    world.faultLinesGeneratedAt,
+                    world.everydayObjectsJson,
+                    world.everydayObjectsGeneratedAt
                 """)
                 .bind(worldId).to("worldId")
                 .run();
@@ -775,6 +779,101 @@ public class WorldService {
             }
         }
 
+        String context = buildWorldAnalysisContext(worldId, world).text();
+
+        FaultLineResponse result =
+                openRouterService.generateFaultLines(context);
+
+        try {
+            String json = objectMapper.writeValueAsString(result);
+
+            neo4jClient.query("""
+                    MATCH (world:World {id: $worldId})
+                    SET
+                        world.faultLinesJson = $json,
+                        world.faultLinesGeneratedAt = $generatedAt
+                    """)
+                    .bind(worldId).to("worldId")
+                    .bind(json).to("json")
+                    .bind(Instant.now().toString()).to("generatedAt")
+                    .run();
+
+        } catch (Exception e) {
+            throw new RuntimeException(
+                    "Failed to cache fault lines",
+                    e
+            );
+        }
+
+        return result;
+    }
+
+    public EverydayObjectsResponse findEverydayObjects(String worldId) {
+        WorldSummary world = getWorld(worldId);
+
+        Map<String, Object> cached =
+                neo4jClient.query("""
+                        MATCH (world:World {id: $worldId})
+                        RETURN
+                            world.everydayObjectsJson AS everydayObjectsJson,
+                            world.everydayObjectsGeneratedAt AS generatedAt
+                        """)
+                        .bind(worldId).to("worldId")
+                        .fetch()
+                        .one()
+                        .orElseThrow(() ->
+                                new RuntimeException("World not found")
+                        );
+
+        Object cachedJson = cached.get("everydayObjectsJson");
+
+        if (cachedJson != null) {
+            try {
+                return objectMapper.readValue(
+                        cachedJson.toString(),
+                        EverydayObjectsResponse.class
+                );
+            } catch (Exception e) {
+                throw new RuntimeException(
+                        "Failed to parse cached everyday objects",
+                        e
+                );
+            }
+        }
+
+        WorldAnalysisContext context = buildWorldAnalysisContext(worldId, world);
+        EverydayObjectsResponse result =
+                openRouterService.generateEverydayObjects(context.text());
+        validateEverydayObjects(result, context.nodeIds());
+
+        try {
+            String json = objectMapper.writeValueAsString(result);
+
+            neo4jClient.query("""
+                    MATCH (world:World {id: $worldId})
+                    SET
+                        world.everydayObjectsJson = $json,
+                        world.everydayObjectsGeneratedAt = $generatedAt
+                    """)
+                    .bind(worldId).to("worldId")
+                    .bind(json).to("json")
+                    .bind(Instant.now().toString()).to("generatedAt")
+                    .run();
+
+        } catch (Exception e) {
+            throw new RuntimeException(
+                    "Failed to cache everyday objects",
+                    e
+            );
+        }
+
+        return result;
+    }
+
+    private WorldAnalysisContext buildWorldAnalysisContext(
+            String worldId,
+            WorldSummary world
+    ) {
         List<Map<String, Object>> nodes =
                 neo4jClient.query("""
                         MATCH (world:World {id: $worldId})-[:HAS_NODE]->(node:WorldNode)
@@ -834,32 +933,36 @@ public class WorldService {
             context.append("\n");
         }
 
-        FaultLineResponse result =
-                openRouterService.generateFaultLines(
-                        context.toString()
-                );
+        Set<String> nodeIds = nodes.stream()
+                .map(node -> node.get("id").toString())
+                .collect(Collectors.toSet());
 
-        try {
-            String json = objectMapper.writeValueAsString(result);
+        return new WorldAnalysisContext(context.toString(), nodeIds);
+    }
 
-            neo4jClient.query("""
-                    MATCH (world:World {id: $worldId})
-                    SET
-                        world.faultLinesJson = $json,
-                        world.faultLinesGeneratedAt = $generatedAt
-                    """)
-                    .bind(worldId).to("worldId")
-                    .bind(json).to("json")
-                    .bind(Instant.now().toString()).to("generatedAt")
-                    .run();
-
-        } catch (Exception e) {
+    private void validateEverydayObjects(
+            EverydayObjectsResponse response,
+            Set<String> worldNodeIds
+    ) {
+        if (response.objects() == null || response.objects().size() != 3) {
             throw new RuntimeException(
-                    "Failed to cache fault lines",
-                    e
+                    "Everyday objects response must contain exactly 3 objects"
             );
         }
 
-        return result;
+        boolean containsUnknownNodeId = response.objects().stream()
+                .anyMatch(object ->
+                        object.supportingNodeIds() == null
+                                || object.supportingNodeIds().isEmpty()
+                                || !worldNodeIds.containsAll(object.supportingNodeIds())
+                );
+
+        if (containsUnknownNodeId) {
+            throw new RuntimeException(
+                    "Everyday objects response contains an invalid supporting node ID"
+            );
+        }
     }
+
+    private record WorldAnalysisContext(String text, Set<String> nodeIds) {}
 }

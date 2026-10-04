@@ -2320,6 +2320,121 @@ button {
     cursor: default;
   }
 
+  .world-analysis-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+
+  /* ---------- Everyday Objects ---------- */
+
+  .everyday-objects-panel {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 20;
+    width: min(500px, calc(100vw - 40px));
+    max-height: calc(100% - 40px);
+    padding: 28px;
+    overflow-y: auto;
+    border: 1px solid rgba(130, 178, 164, 0.22);
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(16, 23, 25, 0.98), rgba(9, 13, 17, 0.98));
+    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.52);
+    scrollbar-width: thin;
+    scrollbar-color: #344642 transparent;
+    animation: panel-enter 220ms ease-out both;
+  }
+
+  .everyday-objects-header {
+    padding-right: 28px;
+    margin-bottom: 22px;
+  }
+
+  .everyday-objects-header h2 {
+    margin: 8px 0;
+    color: #eef2ef;
+    font-size: 25px;
+    font-weight: 600;
+  }
+
+  .everyday-objects-header p {
+    margin: 0;
+    color: #8e9d99;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .everyday-objects-list {
+    display: grid;
+    gap: 14px;
+  }
+
+  .everyday-object-card {
+    position: relative;
+    padding: 19px;
+    border: 1px solid rgba(132, 175, 163, 0.18);
+    border-radius: 13px;
+    background: rgba(19, 28, 29, 0.72);
+  }
+
+  .everyday-object-number {
+    color: #668d82;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+  }
+
+  .everyday-object-card h3 {
+    margin: 6px 0 7px;
+    color: #e5ece8;
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .everyday-object-description {
+    margin: 0;
+    color: #a6b1ad;
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  .everyday-object-shift {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+    margin-top: 15px;
+  }
+
+  .everyday-object-shift section,
+  .everyday-object-reason {
+    padding: 11px;
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    border-radius: 9px;
+    background: rgba(8, 13, 16, 0.52);
+  }
+
+  .everyday-object-shift span,
+  .everyday-object-reason span {
+    color: #6f8f86;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+  }
+
+  .everyday-object-shift p,
+  .everyday-object-reason p {
+    margin: 6px 0 0;
+    color: #aab4b0;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
+  .everyday-object-reason {
+    margin-top: 9px;
+    border-left: 2px solid rgba(113, 173, 155, 0.55);
+  }
+
 
   /* ---------- Fault Line Panel ---------- */
 
@@ -2917,7 +3032,8 @@ button {
 
   @media (max-width: 760px) {
     .fault-line-lens,
-    .fault-line-panel {
+    .fault-line-panel,
+    .everyday-objects-panel {
       top: 12px;
       right: 12px;
       width: calc(100vw - 24px);
@@ -2952,6 +3068,23 @@ button {
 
     .world-analysis-label {
       display: none;
+    }
+
+    .world-analysis-launcher {
+      left: 12px;
+      right: 12px;
+    }
+
+    .world-analysis-actions {
+      width: 100%;
+    }
+
+    .world-analysis-actions button {
+      flex: 1;
+    }
+
+    .everyday-object-shift {
+      grid-template-columns: 1fr;
     }
   }
 

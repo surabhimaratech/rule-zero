@@ -127,4 +127,11 @@ public class WorldController {
     ) {
         return worldService.findFaultLines(worldId);
     }
+
+    @PostMapping("/{worldId}/analysis/everyday-objects")
+    public EverydayObjectsResponse findEverydayObjects(
+            @PathVariable String worldId
+    ) {
+        return worldService.findEverydayObjects(worldId);
+    }
 }

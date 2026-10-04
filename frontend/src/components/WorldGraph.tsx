@@ -21,6 +21,8 @@ import dagre from "@dagrejs/dagre";
 import "@xyflow/react/dist/style.css";
 
 import type {
+  EverydayObject,
+  EverydayObjectsResponse,
   FaultLine,
   FaultLineResponse,
   InquiryDirection,
@@ -31,6 +33,7 @@ import type {
 import WorldNode from "./WorldNode";
 import NodeDetails from "./NodeDetails";
 import FaultLinePanel from "./FaultLinePanel";
+import EverydayObjectsPanel from "./EverydayObjectsPanel";
 
 const nodeTypes = {
   worldNode: WorldNode,
@@ -208,6 +211,15 @@ export default function WorldGraph({
   const [selectedFaultLineIndex, setSelectedFaultLineIndex] =
     useState<number | null>(null);
 
+  const [everydayObjects, setEverydayObjects] =
+    useState<EverydayObject[]>([]);
+  const [isAnalyzingEverydayObjects, setIsAnalyzingEverydayObjects] =
+    useState(false);
+  const [showEverydayObjects, setShowEverydayObjects] =
+    useState(false);
+  const [everydayObjectsError, setEverydayObjectsError] =
+    useState<string | null>(null);
+
   const [newNodeIds, setNewNodeIds] =
     useState<Set<string>>(new Set());
   const [rewrittenNodeId, setRewrittenNodeId] =
@@ -329,6 +341,9 @@ export default function WorldGraph({
       setFaultLines([]);
       setFaultLineError(null);
       setSelectedFaultLineIndex(null);
+      setShowEverydayObjects(false);
+      setEverydayObjects([]);
+      setEverydayObjectsError(null);
       setNewNodeIds(new Set());
       setRewrittenNodeId(null);
       setRewritePreviewNodeId(null);
@@ -473,6 +488,7 @@ export default function WorldGraph({
     if (faultLines.length > 0) {
       setSelectedNode(null);
       setRewritePreviewNodeId(null);
+      setShowEverydayObjects(false);
       setSelectedFaultLineIndex(0);
       setIsFaultLineDetailsOpen(false);
       setShowFaultLines(true);
@@ -483,6 +499,7 @@ export default function WorldGraph({
     setFaultLineError(null);
     setSelectedNode(null);
     setRewritePreviewNodeId(null);
+    setShowEverydayObjects(false);
 
     try {
       const response = await fetch(
@@ -513,6 +530,55 @@ export default function WorldGraph({
       );
     } finally {
       setIsAnalyzingFaultLines(false);
+    }
+  }
+
+  async function analyzeEverydayObjects() {
+    if (!worldId || isAnalyzingEverydayObjects) {
+      return;
+    }
+
+    if (everydayObjects.length > 0) {
+      setSelectedNode(null);
+      setRewritePreviewNodeId(null);
+      setShowFaultLines(false);
+      setSelectedFaultLineIndex(null);
+      setShowEverydayObjects(true);
+      return;
+    }
+
+    setIsAnalyzingEverydayObjects(true);
+    setEverydayObjectsError(null);
+    setSelectedNode(null);
+    setRewritePreviewNodeId(null);
+    setShowFaultLines(false);
+    setSelectedFaultLineIndex(null);
+
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/worlds/${worldId}/analysis/everyday-objects`,
+        { method: "POST" }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to analyze everyday objects");
+      }
+
+      const data: EverydayObjectsResponse = await response.json();
+
+      if (data.objects.length !== 3) {
+        throw new Error("Everyday Objects analysis did not return 3 objects");
+      }
+
+      setEverydayObjects(data.objects);
+      setShowEverydayObjects(true);
+    } catch (err) {
+      console.error(err);
+      setEverydayObjectsError(
+        "Could not analyze this world's everyday objects."
+      );
+    } finally {
+      setIsAnalyzingEverydayObjects(false);
     }
   }
 
@@ -613,6 +679,9 @@ export default function WorldGraph({
       setFaultLines([]);
       setShowFaultLines(false);
       setSelectedFaultLineIndex(null);
+      setEverydayObjects([]);
+      setShowEverydayObjects(false);
+      setEverydayObjectsError(null);
     } catch (err) {
       console.error(err);
 
@@ -666,6 +735,9 @@ export default function WorldGraph({
       setFaultLines([]);
       setShowFaultLines(false);
       setSelectedFaultLineIndex(null);
+      setEverydayObjects([]);
+      setShowEverydayObjects(false);
+      setEverydayObjectsError(null);
       setRewritePreviewNodeId(null);
       setRewrittenNodeId(nodeId);
       setNewNodeIds(new Set(
@@ -718,6 +790,7 @@ export default function WorldGraph({
     (_event: React.MouseEvent, node: Node) => {
       setShowFaultLines(false);
       setSelectedFaultLineIndex(null);
+      setShowEverydayObjects(false);
       setRewritePreviewNodeId(null);
       setInquiryNodeId(null);
       setDetailIntent("default");
@@ -767,6 +840,7 @@ export default function WorldGraph({
         setInquiryNodeId(null);
         setShowFaultLines(false);
         setSelectedFaultLineIndex(null);
+        setShowEverydayObjects(false);
         setIsFaultLineDetailsOpen(false);
         ignitionRunRef.current += 1;
         setShowIgnitionPrompt(false);
@@ -1113,6 +1187,12 @@ export default function WorldGraph({
         </div>
       )}
 
+      {everydayObjectsError && (
+        <div className="world-error">
+          {everydayObjectsError}
+        </div>
+      )}
+
       <div className="world-layout">
         <div className="graph-container">
           {currentWorld && !showFaultLines && (
@@ -1154,26 +1234,35 @@ export default function WorldGraph({
             </button>
           )}
 
-          {currentWorld && !showFaultLines && (
+          {currentWorld && !showFaultLines && !showEverydayObjects && (
             <div className="world-analysis-launcher">
               <span className="world-analysis-label">
                 WORLD ANALYSIS
               </span>
 
-              <button
-                onClick={() =>
-                  void analyzeFaultLines()
-                }
-                disabled={
-                  isAnalyzingFaultLines
-                }
-              >
-                {isAnalyzingFaultLines
-                  ? "Finding where society divides…"
-                  : faultLines.length > 0
-                    ? "View Fault Lines"
-                    : "Find Fault Lines"}
-              </button>
+              <div className="world-analysis-actions">
+                <button
+                  onClick={() => void analyzeFaultLines()}
+                  disabled={isAnalyzingFaultLines || isAnalyzingEverydayObjects}
+                >
+                  {isAnalyzingFaultLines
+                    ? "Finding divisions…"
+                    : faultLines.length > 0
+                      ? "View Fault Lines"
+                      : "Find Fault Lines"}
+                </button>
+
+                <button
+                  onClick={() => void analyzeEverydayObjects()}
+                  disabled={isAnalyzingEverydayObjects || isAnalyzingFaultLines}
+                >
+                  {isAnalyzingEverydayObjects
+                    ? "Examining objects…"
+                    : everydayObjects.length > 0
+                      ? "View Everyday Objects"
+                      : "Everyday Objects"}
+                </button>
+              </div>
             </div>
           )}
 
@@ -1287,7 +1376,7 @@ export default function WorldGraph({
           )}
         </div>
 
-        {selectedNode && !showFaultLines && (
+        {selectedNode && !showFaultLines && !showEverydayObjects && (
           <NodeDetails
             key={`${selectedNode.id}-${selectedNode.data.title}-${selectedNode.data.description}-${detailIntentNonce}`}
             node={selectedNode}
@@ -1343,6 +1432,13 @@ export default function WorldGraph({
               setIsFaultLineDetailsOpen(false);
               setShowFaultLines(false)
             }}
+          />
+        )}
+
+        {showEverydayObjects && (
+          <EverydayObjectsPanel
+            objects={everydayObjects}
+            onClose={() => setShowEverydayObjects(false)}
           />
         )}
       </div>

@@ -101,6 +101,52 @@ class WorldServiceTest {
     }
 
     @Test
+    void cachesThreeEverydayObjectsAndReusesThemWithoutAnotherOpenRouterCall() {
+        Map<String, Object> worldRow = sampleWorldRow();
+        Map<String, Object> uncached = new HashMap<>();
+        uncached.put("everydayObjectsJson", null);
+        uncached.put("generatedAt", null);
+
+        EverydayObjectsResponse generated = sampleEverydayObjects();
+        String cachedJson = """
+                {"objects":[{"name":"Shoes","description":"Shoes that watch for injuries.","before":"They provided support.","now":"They detect tissue damage.","whyItChanged":"Pain no longer warns people.","supportingNodeIds":["node-1"]},{"name":"Medicine Cabinet","description":"A cabinet that tracks dosage.","before":"It stored medicine.","now":"It verifies every dose.","whyItChanged":"Silent injuries demand monitoring.","supportingNodeIds":["node-1"]},{"name":"Desk Chair","description":"A chair that shifts pressure.","before":"It supported seated work.","now":"It prevents unnoticed strain.","whyItChanged":"Workers cannot feel harmful posture.","supportingNodeIds":["node-1"]}]}
+                """.trim();
+
+        when(neo4jClient.query(argThat((String query) ->
+                query != null && query.contains("count(node) AS nodeCount")))
+                .bind(WORLD_ID).to("worldId")
+                .fetch().one())
+                .thenReturn(Optional.of(worldRow));
+        when(neo4jClient.query(argThat((String query) ->
+                query != null && query.contains("world.everydayObjectsJson AS everydayObjectsJson")))
+                .bind(WORLD_ID).to("worldId")
+                .fetch().one())
+                .thenReturn(
+                        Optional.of(uncached),
+                        Optional.of(Map.of(
+                                "everydayObjectsJson", cachedJson,
+                                "generatedAt", "2026-01-01T01:00:00Z"
+                        ))
+                );
+        stubWorldNodes();
+        when(openRouterService.generateEverydayObjects(
+                org.mockito.ArgumentMatchers.anyString()))
+                .thenReturn(generated);
+
+        assertEquals(generated, worldService.findEverydayObjects(WORLD_ID));
+        EverydayObjectsResponse cached = worldService.findEverydayObjects(WORLD_ID);
+        assertEquals(generated, cached);
+        assertEquals(3, cached.objects().size());
+
+        verify(openRouterService, times(1))
+                .generateEverydayObjects(org.mockito.ArgumentMatchers.anyString());
+        verify(neo4jClient, times(1)).query(argThat((String query) ->
+                query != null
+                        && query.contains("world.everydayObjectsJson = $json")
+                        && query.contains("world.everydayObjectsGeneratedAt = $generatedAt")));
+    }
+
+    @Test
     void changingAnOutcomeInvalidatesCachedFaultLines() {
         Map<String, Object> uncached = new HashMap<>();
         uncached.put("faultLinesJson", null);
@@ -163,13 +209,15 @@ class WorldServiceTest {
                 query != null
                         && query.contains("REMOVE")
                         && query.contains("world.faultLinesJson")
-                        && query.contains("world.faultLinesGeneratedAt")));
+                        && query.contains("world.faultLinesGeneratedAt")
+                        && query.contains("world.everydayObjectsJson")
+                        && query.contains("world.everydayObjectsGeneratedAt")));
         verify(openRouterService, times(1))
                 .generateFaultLines(org.mockito.ArgumentMatchers.anyString());
     }
 
     @Test
-    void expandingANodeInvalidatesCachedFaultLines() {
+    void expandingANodeInvalidatesAnalysesAndRegeneratesEverydayObjects() {
         when(neo4jClient.query(argThat((String query) ->
                 query != null && query.contains("RETURN node.title AS title, node.description AS description")))
                 .bind(WORLD_ID).to("worldId")
@@ -198,8 +246,29 @@ class WorldServiceTest {
                         "Culture"
                 )
         )));
+        Map<String, Object> uncached = new HashMap<>();
+        uncached.put("everydayObjectsJson", null);
+        uncached.put("generatedAt", null);
+        when(neo4jClient.query(argThat((String query) ->
+                query != null && query.contains("count(node) AS nodeCount")))
+                .bind(WORLD_ID).to("worldId")
+                .fetch().one())
+                .thenReturn(Optional.of(sampleWorldRow()));
+        when(neo4jClient.query(argThat((String query) ->
+                query != null && query.contains("world.everydayObjectsJson AS everydayObjectsJson")))
+                .bind(WORLD_ID).to("worldId")
+                .fetch().one())
+                .thenReturn(Optional.of(uncached));
+        stubWorldNodes();
+        when(openRouterService.generateEverydayObjects(
+                org.mockito.ArgumentMatchers.anyString()))
+                .thenReturn(sampleEverydayObjects());
 
         worldService.expandNode(WORLD_ID, NODE_ID, "breaks");
+        assertEquals(
+                sampleEverydayObjects(),
+                worldService.findEverydayObjects(WORLD_ID)
+        );
 
         verify(openRouterService).generateNextConsequences(
                 "Parent outcome",
@@ -211,7 +280,11 @@ class WorldServiceTest {
                 query != null
                         && query.contains("REMOVE")
                         && query.contains("world.faultLinesJson")
-                        && query.contains("world.faultLinesGeneratedAt")));
+                        && query.contains("world.faultLinesGeneratedAt")
+                        && query.contains("world.everydayObjectsJson")
+                        && query.contains("world.everydayObjectsGeneratedAt")));
+        verify(openRouterService, times(1))
+                .generateEverydayObjects(org.mockito.ArgumentMatchers.anyString());
     }
 
     @Test
@@ -241,8 +314,63 @@ class WorldServiceTest {
 
         verify(neo4jClient, never()).query(argThat((String query) ->
                 query != null
-                        && query.contains("world.faultLinesJson")
+                        && (query.contains("world.faultLinesJson")
+                            || query.contains("world.everydayObjectsJson"))
                         && query.contains("REMOVE")));
+    }
+
+    private Map<String, Object> sampleWorldRow() {
+        return Map.of(
+                "id", WORLD_ID,
+                "name", "Test World",
+                "rootRule", "Humans cannot feel pain",
+                "createdAt", "2026-01-01T00:00:00Z",
+                "updatedAt", "2026-01-01T00:00:00Z",
+                "nodeCount", 1L
+        );
+    }
+
+    private void stubWorldNodes() {
+        when(neo4jClient.query(argThat((String query) ->
+                query != null && query.contains("ORDER BY node.nodeType, node.title")))
+                .bind(WORLD_ID).to("worldId")
+                .fetch().all())
+                .thenReturn(List.of(Map.of(
+                        "id", NODE_ID,
+                        "title", "Silent injuries",
+                        "description", "Injuries can go unnoticed",
+                        "domain", "Medicine",
+                        "nodeType", "consequence"
+                )));
+    }
+
+    private EverydayObjectsResponse sampleEverydayObjects() {
+        return new EverydayObjectsResponse(List.of(
+                new EverydayObjectsResponse.EverydayObject(
+                        "Shoes",
+                        "Shoes that watch for injuries.",
+                        "They provided support.",
+                        "They detect tissue damage.",
+                        "Pain no longer warns people.",
+                        List.of(NODE_ID)
+                ),
+                new EverydayObjectsResponse.EverydayObject(
+                        "Medicine Cabinet",
+                        "A cabinet that tracks dosage.",
+                        "It stored medicine.",
+                        "It verifies every dose.",
+                        "Silent injuries demand monitoring.",
+                        List.of(NODE_ID)
+                ),
+                new EverydayObjectsResponse.EverydayObject(
+                        "Desk Chair",
+                        "A chair that shifts pressure.",
+                        "It supported seated work.",
+                        "It prevents unnoticed strain.",
+                        "Workers cannot feel harmful posture.",
+                        List.of(NODE_ID)
+                )
+        ));
     }
 
     private FaultLineResponse sampleFaultLines() {

@@ -518,5 +518,79 @@ public class OpenRouterService {
                 }
         }
 
+        public EverydayObjectsResponse generateEverydayObjects(String worldContext) {
+                String prompt = """
+                        Analyze this fictional world as a whole and identify exactly 3
+                        ordinary objects plausibly changed by its causal consequences.
+
+                        Requirements:
+                        - Choose everyday objects, such as shoes, locks, phones, kitchen
+                          tools, medicine cabinets, school supplies, transit cards,
+                          clothing, furniture, or workplace equipment.
+                        - Avoid artifacts, institutions, industries, or spectacle.
+                        - Ground every change in the supplied world state.
+                        - Use only supporting node IDs present in the context.
+                        - Keep every text field to 1 concise sentence.
+
+                        Return ONLY valid JSON in this exact shape:
+                        {
+                          "objects": [
+                            {
+                              "name": "specific ordinary object",
+                              "description": "what the changed object is",
+                              "before": "how it worked in a normal baseline world",
+                              "now": "how it works in this world",
+                              "whyItChanged": "causal connection to this world",
+                              "supportingNodeIds": ["existing-node-id"]
+                            }
+                          ]
+                        }
+
+                        Current world:
+                        %s
+                        """.formatted(worldContext);
+
+                Map<String, Object> body = Map.of(
+                        "model", "openai/gpt-4.1-mini",
+                        "max_tokens", 1200,
+                        "messages", List.of(
+                                Map.of(
+                                        "role", "user",
+                                        "content", prompt
+                                )
+                        )
+                );
+
+                String response = restClient.post()
+                        .body(body)
+                        .retrieve()
+                        .body(String.class);
+
+                try {
+                        JsonNode root = objectMapper.readTree(response);
+
+                        String content = root.path("choices")
+                                .get(0)
+                                .path("message")
+                                .path("content")
+                                .asText();
+
+                        String cleanedContent = content
+                                .replace("```json", "")
+                                .replace("```", "")
+                                .trim();
+
+                        return objectMapper.readValue(
+                                cleanedContent,
+                                EverydayObjectsResponse.class
+                        );
+                } catch (Exception e) {
+                        throw new RuntimeException(
+                                "Failed to parse everyday objects response",
+                                e
+                        );
+                }
+        }
+
 
 }
