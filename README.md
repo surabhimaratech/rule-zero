@@ -24,7 +24,9 @@ Worlds are persisted independently in Neo4j, so users can return to a simulated 
 - Downstream invalidation when assumptions change
 - AI-generated ideological fault lines
 - Persistent fault-line analysis with automatic cache invalidation
-- A graph-integrated faction conflict stage with supporting causal paths
+- A Field Guide reading mode for graph-grounded world analysis
+- Editorial Fault Line chapters with supporting causal evidence
+- Trace Causes and immersive Enter Conflict investigation modes
 
 ## Tech stack
 
@@ -61,6 +63,24 @@ restores the opening frame.
 Unexplored consequences offer three causal directions rather than a generic
 continuation. Fault Lines reuse the graph as a conflict stage, separating the
 evidence behind opposing factions and projecting their likely flashpoint.
+
+## Field Guide
+
+The Field Guide is the analysis layer of a simulated world. It deliberately
+stays beside the causal graph instead of becoming a separate report or lore
+database. The chapter bar currently exposes **World** and **Fault Lines**.
+
+Fault Lines opens as a chapter index. Entering a division reveals one editorial
+conflict page at a time: its central tension, the two incompatible belief
+systems, what each faction seeks and fears, and the flashpoint most likely to
+turn the disagreement into a story. Causal evidence links back to the exact
+nodes that produced the conflict. **Trace causes** frames those nodes and their
+ancestry; **Enter conflict** expands the graph into a full-width conflict map.
+
+Everyday Objects analysis remains implemented as a cached experimental analysis,
+but it is intentionally not included in the chapter navigation yet. New Field
+Guide chapters should only be exposed once they have a distinct graph-grounded
+interaction rather than a generic generated-results panel.
 
 ## Local setup
 
