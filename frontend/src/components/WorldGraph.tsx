@@ -225,6 +225,8 @@ export default function WorldGraph({
     useState<string | null>(null);
   const [isFaultLineDetailsOpen, setIsFaultLineDetailsOpen] =
     useState(false);
+  const [evidenceFocusNodeId, setEvidenceFocusNodeId] =
+    useState<string | null>(null);
   const [inquiryNodeId, setInquiryNodeId] =
     useState<string | null>(null);
   const [detailIntent, setDetailIntent] =
@@ -852,6 +854,17 @@ export default function WorldGraph({
   const factionBNodeIds = new Set(
     selectedFaultLine?.factionB.supportingNodeIds ?? []
   );
+  const evidenceNodeIds = new Set([
+    ...factionANodeIds,
+    ...factionBNodeIds,
+  ]);
+  const faultLineEvidenceNodes = nodes
+    .filter((node) => evidenceNodeIds.has(node.id))
+    .map((node) => ({
+      id: node.id,
+      title: node.data.title,
+      domain: node.data.domain,
+    }));
 
   function collectFactionPathIds(seedIds: Set<string>) {
     const pathIds = new Set(seedIds);
@@ -942,6 +955,14 @@ export default function WorldGraph({
             : supportsFactionB
               ? "graph-node-faction-b"
               : "graph-node-fault-line-dimmed");
+
+        if (evidenceFocusNodeId) {
+          classNames.push(
+            node.id === evidenceFocusNodeId
+              ? "graph-node-evidence-focus"
+              : "graph-node-evidence-muted"
+          );
+        }
       } else if (rewritePreviewNodeId) {
         classNames.push(
           node.id === rewritePreviewNodeId
@@ -1372,14 +1393,29 @@ export default function WorldGraph({
         {showFaultLines && (
           <FaultLinePanel
             faultLines={faultLines}
+            evidenceNodes={faultLineEvidenceNodes}
             selectedIndex={selectedFaultLineIndex}
             expanded={isFaultLineDetailsOpen}
             onExpandedChange={setIsFaultLineDetailsOpen}
+            onEvidenceFocus={setEvidenceFocusNodeId}
+            onEvidenceSelect={(nodeId) => {
+              setEvidenceFocusNodeId(nodeId);
+
+              if (flowInstanceRef.current && loadedGraphRef.current) {
+                frameNodeNeighborhood(
+                  flowInstanceRef.current,
+                  loadedGraphRef.current,
+                  nodeId
+                );
+              }
+            }}
             onSelect={(index) => {
               setSelectedNode(null);
+              setEvidenceFocusNodeId(null);
               setSelectedFaultLineIndex(index);
             }}
             onClose={() => {
+              setEvidenceFocusNodeId(null);
               setSelectedFaultLineIndex(null);
               setIsFaultLineDetailsOpen(false);
               setShowFaultLines(false)

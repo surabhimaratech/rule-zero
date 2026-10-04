@@ -2,19 +2,25 @@ import type { FaultLine } from "../types";
 
 type Props = {
   faultLines: FaultLine[];
+  evidenceNodes: { id: string; title: string; domain: string }[];
   selectedIndex: number | null;
   onSelect: (index: number) => void;
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
+  onEvidenceFocus: (nodeId: string | null) => void;
+  onEvidenceSelect: (nodeId: string) => void;
   onClose: () => void;
 };
 
 export default function FaultLinePanel({
   faultLines,
+  evidenceNodes,
   selectedIndex,
   onSelect,
   expanded,
   onExpandedChange,
+  onEvidenceFocus,
+  onEvidenceSelect,
   onClose,
 }: Props) {
   if (!expanded) {
@@ -135,6 +141,29 @@ export default function FaultLinePanel({
         <section className="fault-line-article-flashpoint">
           <span>PROJECTED FLASHPOINT</span>
           <p>{faultLine.flashpoint}</p>
+        </section>
+
+        <section className="fault-line-evidence">
+          <div>
+            <span>CAUSAL EVIDENCE</span>
+            <p>Consequences in the world that give this conflict its power.</p>
+          </div>
+          <div className="fault-line-evidence-list">
+            {evidenceNodes.map((node) => (
+              <button
+                key={node.id}
+                onMouseEnter={() => onEvidenceFocus(node.id)}
+                onMouseLeave={() => onEvidenceFocus(null)}
+                onFocus={() => onEvidenceFocus(node.id)}
+                onBlur={() => onEvidenceFocus(null)}
+                onClick={() => onEvidenceSelect(node.id)}
+              >
+                <small>{node.domain}</small>
+                <strong>{node.title}</strong>
+                <span aria-hidden="true">Locate →</span>
+              </button>
+            ))}
+          </div>
         </section>
       </article>
     </aside>
