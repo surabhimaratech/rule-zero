@@ -22,7 +22,6 @@ import "@xyflow/react/dist/style.css";
 
 import type {
   EverydayObject,
-  EverydayObjectsResponse,
   FaultLine,
   FaultLineResponse,
   InquiryDirection,
@@ -213,8 +212,6 @@ export default function WorldGraph({
 
   const [everydayObjects, setEverydayObjects] =
     useState<EverydayObject[]>([]);
-  const [isAnalyzingEverydayObjects, setIsAnalyzingEverydayObjects] =
-    useState(false);
   const [showEverydayObjects, setShowEverydayObjects] =
     useState(false);
   const [everydayObjectsError, setEverydayObjectsError] =
@@ -530,55 +527,6 @@ export default function WorldGraph({
       );
     } finally {
       setIsAnalyzingFaultLines(false);
-    }
-  }
-
-  async function analyzeEverydayObjects() {
-    if (!worldId || isAnalyzingEverydayObjects) {
-      return;
-    }
-
-    if (everydayObjects.length > 0) {
-      setSelectedNode(null);
-      setRewritePreviewNodeId(null);
-      setShowFaultLines(false);
-      setSelectedFaultLineIndex(null);
-      setShowEverydayObjects(true);
-      return;
-    }
-
-    setIsAnalyzingEverydayObjects(true);
-    setEverydayObjectsError(null);
-    setSelectedNode(null);
-    setRewritePreviewNodeId(null);
-    setShowFaultLines(false);
-    setSelectedFaultLineIndex(null);
-
-    try {
-      const response = await fetch(
-        `http://localhost:8080/api/worlds/${worldId}/analysis/everyday-objects`,
-        { method: "POST" }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to analyze everyday objects");
-      }
-
-      const data: EverydayObjectsResponse = await response.json();
-
-      if (data.objects.length !== 3) {
-        throw new Error("Everyday Objects analysis did not return 3 objects");
-      }
-
-      setEverydayObjects(data.objects);
-      setShowEverydayObjects(true);
-    } catch (err) {
-      console.error(err);
-      setEverydayObjectsError(
-        "Could not analyze this world's everyday objects."
-      );
-    } finally {
-      setIsAnalyzingEverydayObjects(false);
     }
   }
 
@@ -1234,36 +1182,28 @@ export default function WorldGraph({
             </button>
           )}
 
-          {currentWorld && !showFaultLines && !showEverydayObjects && (
-            <div className="world-analysis-launcher">
-              <span className="world-analysis-label">
-                WORLD ANALYSIS
-              </span>
-
-              <div className="world-analysis-actions">
-                <button
-                  onClick={() => void analyzeFaultLines()}
-                  disabled={isAnalyzingFaultLines || isAnalyzingEverydayObjects}
-                >
-                  {isAnalyzingFaultLines
-                    ? "Finding divisions…"
-                    : faultLines.length > 0
-                      ? "View Fault Lines"
-                      : "Find Fault Lines"}
-                </button>
-
-                <button
-                  onClick={() => void analyzeEverydayObjects()}
-                  disabled={isAnalyzingEverydayObjects || isAnalyzingFaultLines}
-                >
-                  {isAnalyzingEverydayObjects
-                    ? "Examining objects…"
-                    : everydayObjects.length > 0
-                      ? "View Everyday Objects"
-                      : "Everyday Objects"}
-                </button>
-              </div>
-            </div>
+          {currentWorld && !ignitionVisibleIds && (
+            <nav className="world-chapter-bar" aria-label="Field Guide chapters">
+              <span className="world-chapter-label">FIELD GUIDE</span>
+              <button
+                className={!showFaultLines && !showEverydayObjects ? "active" : ""}
+                onClick={() => {
+                  setShowFaultLines(false);
+                  setShowEverydayObjects(false);
+                  setSelectedFaultLineIndex(null);
+                }}
+              >
+                World
+              </button>
+              <button
+                className={showFaultLines ? "active" : ""}
+                onClick={() => void analyzeFaultLines()}
+                disabled={isAnalyzingFaultLines}
+              >
+                {isAnalyzingFaultLines ? "Finding divisions…" : "Fault Lines"}
+                {faultLines.length > 0 && <small>{faultLines.length}</small>}
+              </button>
+            </nav>
           )}
 
           {!currentWorld && (
