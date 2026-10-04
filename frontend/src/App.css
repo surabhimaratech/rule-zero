@@ -186,6 +186,73 @@ button {
   height: 100%;
 }
 
+.graph-container > .react-flow {
+  position: relative;
+  z-index: 2;
+}
+
+.causal-depth-regions {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 0.8fr 1.05fr 1.05fr 1.1fr;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.causal-depth-region {
+  position: relative;
+  padding: 20px 18px;
+  border-right: 1px solid rgba(118, 132, 155, 0.065);
+  background: linear-gradient(90deg, rgba(78, 91, 115, 0.018), transparent 72%);
+}
+
+.causal-depth-region::after {
+  position: absolute;
+  top: 0;
+  right: -1px;
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(180deg, transparent, rgba(129, 143, 168, 0.11) 28%, rgba(129, 143, 168, 0.05) 72%, transparent);
+  content: "";
+}
+
+.causal-depth-region span,
+.causal-depth-region strong {
+  display: block;
+  opacity: 0.62;
+}
+
+.causal-depth-region span {
+  margin-bottom: 3px;
+  color: #515b6d;
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.causal-depth-region strong {
+  color: #667185;
+  font-size: 8px;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.depth-premise {
+  background: radial-gradient(circle at 20% 45%, rgba(145, 113, 176, 0.055), transparent 62%);
+}
+
+.depth-adaptation {
+  background: linear-gradient(90deg, rgba(72, 110, 127, 0.022), transparent 72%);
+}
+
+.depth-emergence {
+  border-right: 0;
+  background: linear-gradient(90deg, rgba(126, 80, 133, 0.025), transparent 78%);
+}
+
 .return-to-origin {
   position: absolute;
   top: 18px;

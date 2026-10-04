@@ -1115,6 +1115,27 @@ export default function WorldGraph({
 
       <div className="world-layout">
         <div className="graph-container">
+          {currentWorld && !showFaultLines && (
+            <div className="causal-depth-regions" aria-hidden="true">
+              <div className="causal-depth-region depth-premise">
+                <span>01</span>
+                <strong>Premise</strong>
+              </div>
+              <div className="causal-depth-region depth-immediate">
+                <span>02</span>
+                <strong>Immediate effects</strong>
+              </div>
+              <div className="causal-depth-region depth-adaptation">
+                <span>03</span>
+                <strong>Adaptation</strong>
+              </div>
+              <div className="causal-depth-region depth-emergence">
+                <span>04</span>
+                <strong>Emergent world</strong>
+              </div>
+            </div>
+          )}
+
           {currentWorld && !ignitionVisibleIds && (
             <button
               className="return-to-origin"
