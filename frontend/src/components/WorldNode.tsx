@@ -30,14 +30,28 @@ export default function WorldNode({
         className="world-handle"
       />
 
-      <div className="world-node-domain">{data.domain}</div>
+      {isRoot ? (
+        <>
+          <div className="world-node-domain">{data.domain}</div>
+          <div className="world-node-title">{data.title}</div>
+        </>
+      ) : (
+        <>
+          <div className="consequence-card-meta">
+            <span className="world-node-domain">{data.domain}</span>
+            <span className="consequence-card-state">
+              {isFrontier ? "Unexplored" : "Established"}
+            </span>
+          </div>
 
-      <div className="world-node-title">{data.title}</div>
+          <div className="world-node-title">{data.title}</div>
+          <p className="consequence-card-summary">{data.description}</p>
 
-      {!isRoot && (
-        <div className="world-node-signal">
-          {isFrontier && <span>UNEXPLORED</span>}
-        </div>
+          <div className="consequence-card-affordance">
+            <span>{isFrontier ? "Continue this reality" : "Causal branch"}</span>
+            <i aria-hidden="true">→</i>
+          </div>
+        </>
       )}
 
       <Handle
