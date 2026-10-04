@@ -2,7 +2,7 @@
 
 A causal world simulator for exploring how one change to reality reshapes everything downstream.
 
-Rule Zero lets a user define a foundational rule for a fictional world. OpenRouter generates plausible consequences, which are stored and displayed as an interactive causal graph. Users can expand branches, inspect why a consequence happened, generate alternate outcomes, or replace an outcome manually.
+Rule Zero lets a user define a foundational rule for a fictional world. OpenRouter generates plausible consequences, which are stored and displayed as an interactive causal graph. Users can expand frontier nodes, trace causal paths, inspect why a consequence happened, generate alternate outcomes, or rewrite an outcome and preview the affected downstream branch.
 
 Worlds are persisted independently in Neo4j, so users can return to a simulated universe later without losing its expanded branches or explanations.
 
@@ -11,10 +11,15 @@ Worlds are persisted independently in Neo4j, so users can return to a simulated 
 - Define a foundational world rule
 - AI-generated first-order consequences
 - Expandable causal branches
+- Frontier and established-node states
+- Causal breadcrumbs and relationship labels
 - Persistent causal explanations
 - Alternate outcomes
-- Manual outcome override
+- Outcome rewrite previews
 - Downstream invalidation when assumptions change
+- AI-generated ideological fault lines
+- Persistent fault-line analysis with automatic cache invalidation
+- Faction A/B highlighting of supporting graph nodes
 
 ## Tech stack
 
@@ -76,7 +81,7 @@ npm run dev
 
 The frontend runs at `http://localhost:5173`.
 
-The `My Worlds` library lists saved universes and supports opening, renaming, and deleting them. The active world ID is the only application state stored in browser local storage; Neo4j remains the source of truth for every graph and explanation.
+The `My Worlds` library lists saved universes and supports opening, renaming, forking, comparing, and deleting them. The active world ID is the only application state stored in browser local storage; Neo4j remains the source of truth for every graph, explanation, and cached world analysis.
 
 ### Existing local graph
 
@@ -84,7 +89,9 @@ The multi-world schema does not automatically wrap an older unscoped graph. For 
 
 ## How it works
 
-Consequences are stored as Neo4j nodes connected by `CAUSES` relationships. Expanding a node adds the next causal step. Rewriting an outcome removes its downstream descendants because they were based on the previous assumption, while preserving the selected node's incoming relationship.
+Consequences are stored as Neo4j nodes connected by `CAUSES` relationships. Expanding a frontier node adds the next causal step. Selecting a node reveals its causal breadcrumb and relationship context. Rewriting an outcome removes its downstream descendants because they were based on the previous assumption, while preserving the selected node's incoming relationship.
+
+Fault Lines analysis evaluates the current world graph and identifies opposing factions grounded in existing node IDs. The serialized analysis is cached on the owning `World` node as `faultLinesJson` with `faultLinesGeneratedAt`. Expanding the graph or rewriting an outcome invalidates that cache; read-only graph and explanation actions do not. Selecting a fault line highlights the nodes supporting Faction A and Faction B with distinct colors.
 
 ## Build sanity
 

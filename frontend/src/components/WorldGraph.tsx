@@ -7,6 +7,7 @@ import {
 import {
   Background,
   Controls,
+  MarkerType,
   ReactFlow,
   useEdgesState,
   useNodesState,
@@ -52,6 +53,16 @@ type LoadedGraph = {
   nodes: Node<WorldNodeData>[];
   edges: Edge[];
 };
+
+function shortenRelationship(value: string, maxLength = 56) {
+  const trimmed = value.trim();
+
+  if (trimmed.length <= maxLength) {
+    return trimmed;
+  }
+
+  return `${trimmed.slice(0, maxLength - 1).trimEnd()}…`;
+}
 
 type Props = {
   worldId: string | null;
@@ -131,9 +142,24 @@ export default function WorldGraph({
   const [faultLineError, setFaultLineError] =
     useState<string | null>(null);
 
+  const [selectedFaultLineIndex, setSelectedFaultLineIndex] =
+    useState<number | null>(null);
+
+  const [newNodeIds, setNewNodeIds] =
+    useState<Set<string>>(new Set());
+  const [rewrittenNodeId, setRewrittenNodeId] =
+    useState<string | null>(null);
+  const [rewritePreviewNodeId, setRewritePreviewNodeId] =
+    useState<string | null>(null);
+  const [isPremiseComposerOpen, setIsPremiseComposerOpen] =
+    useState(false);
+  const [isFaultLineDetailsOpen, setIsFaultLineDetailsOpen] =
+    useState(false);
+
   const loadGraph = useCallback(
     async (
-      requestedWorldId: string
+      requestedWorldId: string,
+      previousNodes: Node<WorldNodeData>[] = []
     ): Promise<LoadedGraph> => {
       const response = await fetch(
         `http://localhost:8080/api/worlds/${requestedWorldId}/graph`
@@ -146,7 +172,7 @@ export default function WorldGraph({
       const data: GraphApiResponse =
         await response.json();
 
-      const reactFlowNodes: Node<WorldNodeData>[] =
+      let reactFlowNodes: Node<WorldNodeData>[] =
         data.nodes.map((node) => ({
           id: node.id,
           type: "worldNode",
@@ -165,12 +191,45 @@ export default function WorldGraph({
           source: edge.source,
           target: edge.target,
           type: "smoothstep",
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            width: 14,
+            height: 14,
+          },
+          data: { relationship: edge.relationship },
         }));
 
-      const laidOutNodes = layoutGraph(
+      const nodesWithChildren = new Set(
+        reactFlowEdges.map((edge) => edge.source)
+      );
+
+      reactFlowNodes = reactFlowNodes.map((node) => ({
+        ...node,
+        data: {
+          ...node.data,
+          explorationState: node.data.nodeType === "rule"
+            ? "origin"
+            : nodesWithChildren.has(node.id)
+              ? "established"
+              : "frontier",
+        },
+      }));
+
+      let laidOutNodes = layoutGraph(
         reactFlowNodes,
         reactFlowEdges
       );
+
+      if (previousNodes.length > 0) {
+        const previousPositions = new Map(
+          previousNodes.map((node) => [node.id, node.position])
+        );
+
+        laidOutNodes = laidOutNodes.map((node) => ({
+          ...node,
+          position: previousPositions.get(node.id) ?? node.position,
+        }));
+      }
 
       setNodes(laidOutNodes);
       setEdges(reactFlowEdges);
@@ -189,6 +248,12 @@ export default function WorldGraph({
       setShowFaultLines(false);
       setFaultLines([]);
       setFaultLineError(null);
+      setSelectedFaultLineIndex(null);
+      setNewNodeIds(new Set());
+      setRewrittenNodeId(null);
+      setRewritePreviewNodeId(null);
+      setIsPremiseComposerOpen(false);
+      setIsFaultLineDetailsOpen(false);
     });
 
     if (!worldId) {
@@ -265,6 +330,9 @@ export default function WorldGraph({
      */
     if (faultLines.length > 0) {
       setSelectedNode(null);
+      setRewritePreviewNodeId(null);
+      setSelectedFaultLineIndex(0);
+      setIsFaultLineDetailsOpen(false);
       setShowFaultLines(true);
       return;
     }
@@ -272,6 +340,7 @@ export default function WorldGraph({
     setIsAnalyzingFaultLines(true);
     setFaultLineError(null);
     setSelectedNode(null);
+    setRewritePreviewNodeId(null);
 
     try {
       const response = await fetch(
@@ -291,6 +360,8 @@ export default function WorldGraph({
         await response.json();
 
       setFaultLines(data.faultLines);
+      setSelectedFaultLineIndex(data.faultLines.length > 0 ? 0 : null);
+      setIsFaultLineDetailsOpen(false);
       setShowFaultLines(true);
     } catch (err) {
       console.error(err);
@@ -359,8 +430,24 @@ export default function WorldGraph({
         throw new Error("Failed to expand node");
       }
 
-      if (worldId) {
-        await loadGraph(worldId);
+      const previousIds = new Set(nodes.map((node) => node.id));
+      const refreshed = worldId
+        ? await loadGraph(worldId, nodes)
+        : null;
+
+      if (refreshed) {
+        const arrivedIds = new Set(
+          refreshed.nodes
+            .filter((node) => !previousIds.has(node.id))
+            .map((node) => node.id)
+        );
+
+        setNewNodeIds(arrivedIds);
+        setSelectedNode(
+          refreshed.nodes.find((node) => node.id === nodeId) ?? null
+        );
+
+        window.setTimeout(() => setNewNodeIds(new Set()), 12000);
       }
 
       /*
@@ -369,7 +456,7 @@ export default function WorldGraph({
        */
       setFaultLines([]);
       setShowFaultLines(false);
-      setSelectedNode(null);
+      setSelectedFaultLineIndex(null);
     } catch (err) {
       console.error(err);
 
@@ -407,8 +494,9 @@ export default function WorldGraph({
         );
       }
 
+      const previousIds = new Set(nodes.map((node) => node.id));
       const refreshed =
-        await loadGraph(worldId!);
+        await loadGraph(worldId!, nodes);
 
       const updatedNode =
         refreshed.nodes.find(
@@ -421,6 +509,19 @@ export default function WorldGraph({
        */
       setFaultLines([]);
       setShowFaultLines(false);
+      setSelectedFaultLineIndex(null);
+      setRewritePreviewNodeId(null);
+      setRewrittenNodeId(nodeId);
+      setNewNodeIds(new Set(
+        refreshed.nodes
+          .filter((node) => !previousIds.has(node.id))
+          .map((node) => node.id)
+      ));
+
+      window.setTimeout(() => {
+        setRewrittenNodeId(null);
+        setNewNodeIds(new Set());
+      }, 12000);
 
       setSelectedNode(updatedNode);
     } catch (err) {
@@ -460,6 +561,8 @@ export default function WorldGraph({
   const handleNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
       setShowFaultLines(false);
+      setSelectedFaultLineIndex(null);
+      setRewritePreviewNodeId(null);
 
       setSelectedNode(
         node as Node<WorldNodeData>
@@ -476,9 +579,23 @@ export default function WorldGraph({
     );
 
   const selectedPathIds = new Set<string>();
+  const selectedPathNodes: Node<WorldNodeData>[] = [];
+
+  const selectedFaultLine =
+    selectedFaultLineIndex === null
+      ? null
+      : faultLines[selectedFaultLineIndex] ?? null;
+
+  const factionANodeIds = new Set(
+    selectedFaultLine?.factionA.supportingNodeIds ?? []
+  );
+  const factionBNodeIds = new Set(
+    selectedFaultLine?.factionB.supportingNodeIds ?? []
+  );
 
   if (selectedNode) {
     selectedPathIds.add(selectedNode.id);
+    selectedPathNodes.unshift(selectedNode);
 
     let currentId = selectedNode.id;
 
@@ -489,6 +606,14 @@ export default function WorldGraph({
     while (parentEdge) {
       selectedPathIds.add(parentEdge.source);
 
+      const parentNode = nodes.find(
+        (node) => node.id === parentEdge?.source
+      );
+
+      if (parentNode) {
+        selectedPathNodes.unshift(parentNode);
+      }
+
       currentId = parentEdge.source;
 
       parentEdge = edges.find(
@@ -497,37 +622,137 @@ export default function WorldGraph({
     }
   }
 
+  const rewriteDescendantIds = new Set<string>();
+
+  if (rewritePreviewNodeId) {
+    const queue = [rewritePreviewNodeId];
+
+    while (queue.length > 0) {
+      const sourceId = queue.shift()!;
+
+      edges
+        .filter((edge) => edge.source === sourceId)
+        .forEach((edge) => {
+          if (!rewriteDescendantIds.has(edge.target)) {
+            rewriteDescendantIds.add(edge.target);
+            queue.push(edge.target);
+          }
+        });
+    }
+  }
+
   const displayedNodes = nodes.map(
-    (node) => ({
-      ...node,
-      className:
-        selectedNode &&
-        !selectedPathIds.has(node.id)
-          ? "graph-node-dimmed"
-          : selectedNode
-            ? "graph-node-on-path"
-            : undefined,
-    })
+    (node) => {
+      const supportsFactionA = factionANodeIds.has(node.id);
+      const supportsFactionB = factionBNodeIds.has(node.id);
+
+      const classNames: string[] = [];
+
+      if (selectedFaultLine) {
+        classNames.push(supportsFactionA && supportsFactionB
+          ? "graph-node-faction-both"
+          : supportsFactionA
+            ? "graph-node-faction-a"
+            : supportsFactionB
+              ? "graph-node-faction-b"
+              : "graph-node-fault-line-dimmed");
+      } else if (rewritePreviewNodeId) {
+        classNames.push(
+          node.id === rewritePreviewNodeId
+            ? "graph-node-rewrite-source"
+            : rewriteDescendantIds.has(node.id)
+              ? "graph-node-will-rewrite"
+              : "graph-node-rewrite-unaffected"
+        );
+      } else if (selectedNode) {
+        classNames.push(selectedPathIds.has(node.id)
+          ? "graph-node-on-path"
+          : "graph-node-dimmed");
+      }
+
+      if (newNodeIds.has(node.id)) {
+        classNames.push("graph-node-new");
+      }
+
+      if (rewrittenNodeId === node.id) {
+        classNames.push("graph-node-rewritten");
+      }
+
+      return {
+        ...node,
+        className: classNames.join(" ") || undefined,
+      };
+    }
   );
 
-  const displayedEdges = edges.map(
-    (edge) => ({
+  const displayedEdges = edges.map((edge) => {
+    const isOnSelectedPath = Boolean(
+      selectedNode &&
+      selectedPathIds.has(edge.source) &&
+      selectedPathIds.has(edge.target)
+    );
+    const willBeRewritten = Boolean(
+      rewritePreviewNodeId &&
+      (edge.source === rewritePreviewNodeId ||
+        rewriteDescendantIds.has(edge.source)) &&
+      rewriteDescendantIds.has(edge.target)
+    );
+    const relationship =
+      typeof edge.data?.relationship === "string"
+        ? edge.data.relationship
+        : "";
+
+    return {
       ...edge,
-      className:
-        selectedNode &&
-        selectedPathIds.has(edge.source) &&
-        selectedPathIds.has(edge.target)
-          ? "graph-edge-on-path"
-          : selectedNode
-            ? "graph-edge-dimmed"
-            : undefined,
-    })
-  );
+      className: selectedFaultLine
+        ? "graph-edge-dimmed"
+        : rewritePreviewNodeId
+          ? willBeRewritten
+            ? "graph-edge-will-rewrite"
+            : "graph-edge-dimmed"
+          : isOnSelectedPath
+            ? "graph-edge-on-path"
+            : selectedNode
+              ? "graph-edge-dimmed"
+              : undefined,
+      label: isOnSelectedPath && relationship
+        ? shortenRelationship(relationship)
+        : undefined,
+      labelStyle: {
+        fill: "#cdd5e3",
+        fontSize: 10,
+        fontWeight: 600,
+      },
+      labelBgStyle: {
+        fill: "#111620",
+        fillOpacity: 0.94,
+        stroke: "#394254",
+        strokeWidth: 1,
+      },
+      labelBgPadding: [7, 5] as [number, number],
+      labelBgBorderRadius: 5,
+    };
+  });
 
   const currentWorld = worldId !== null;
+  const foundationalRule = nodes.find(
+    (node) => node.data.nodeType === "rule"
+  )?.data.title;
 
   return (
     <>
+      {currentWorld && !isPremiseComposerOpen ? (
+        <div className="world-context-bar">
+          <div className="world-context-orbit" aria-hidden="true" />
+          <div className="world-context-copy">
+            <span>FOUNDATIONAL TRUTH</span>
+            <strong>{foundationalRule ?? "Loading this reality…"}</strong>
+          </div>
+          <button onClick={() => setIsPremiseComposerOpen(true)}>
+            Create another world
+          </button>
+        </div>
+      ) : (
       <div className="rule-input-container">
         <div className="rule-input-copy">
           <div className="rule-input-kicker">
@@ -572,8 +797,22 @@ export default function WorldGraph({
               ? "Simulating..."
               : "Simulate world"}
           </button>
+
+          {currentWorld && (
+            <button
+              className="rule-input-cancel"
+              onClick={() => {
+                setRule("");
+                setIsPremiseComposerOpen(false);
+              }}
+              disabled={isCreating}
+            >
+              Cancel
+            </button>
+          )}
         </div>
       </div>
+      )}
 
       {error && (
         <div className="world-error">
@@ -589,7 +828,7 @@ export default function WorldGraph({
 
       <div className="world-layout">
         <div className="graph-container">
-          {currentWorld && (
+          {currentWorld && !showFaultLines && (
             <div className="world-analysis-launcher">
               <span className="world-analysis-label">
                 WORLD ANALYSIS
@@ -660,9 +899,10 @@ export default function WorldGraph({
           <NodeDetails
             key={`${selectedNode.id}-${selectedNode.data.title}-${selectedNode.data.description}`}
             node={selectedNode}
-            onClose={() =>
-              setSelectedNode(null)
-            }
+            onClose={() => {
+              setSelectedNode(null);
+              setRewritePreviewNodeId(null);
+            }}
             onExpand={expandNode}
             onExplain={explainNode}
             onLoadExplanation={
@@ -674,6 +914,18 @@ export default function WorldGraph({
             onLoadAlternatives={
               loadOutcomeAlternatives
             }
+            causalPath={selectedPathNodes}
+            onFocusNode={(nodeId) => {
+              setSelectedNode(
+                nodes.find((node) => node.id === nodeId) ?? null
+              );
+            }}
+            rewriteDescendantCount={rewriteDescendantIds.size}
+            onRewritePreviewChange={(isPreviewing) => {
+              setRewritePreviewNodeId(
+                isPreviewing ? selectedNode.id : null
+              );
+            }}
             isExpanding={isExpanding}
             hasChildren={
               selectedNodeHasChildren
@@ -684,9 +936,20 @@ export default function WorldGraph({
         {showFaultLines && (
           <FaultLinePanel
             faultLines={faultLines}
-            onClose={() =>
+            selectedIndex={selectedFaultLineIndex}
+            expanded={isFaultLineDetailsOpen}
+            onExpandedChange={setIsFaultLineDetailsOpen}
+            onSelect={(index) => {
+              setSelectedNode(null);
+              setSelectedFaultLineIndex(
+                selectedFaultLineIndex === index ? null : index
+              );
+            }}
+            onClose={() => {
+              setSelectedFaultLineIndex(null);
+              setIsFaultLineDetailsOpen(false);
               setShowFaultLines(false)
-            }
+            }}
           />
         )}
       </div>

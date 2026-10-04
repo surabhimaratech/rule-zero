@@ -20,6 +20,10 @@ type Props = {
   ) => Promise<OutcomeAlternative[]>;
   isExpanding: boolean;
   hasChildren: boolean;
+  causalPath: Node<WorldNodeData>[];
+  onFocusNode: (nodeId: string) => void;
+  rewriteDescendantCount: number;
+  onRewritePreviewChange: (isPreviewing: boolean) => void;
 };
 
 export default function NodeDetails({
@@ -32,6 +36,10 @@ export default function NodeDetails({
   onLoadAlternatives,
   isExpanding,
   hasChildren,
+  causalPath,
+  onFocusNode,
+  rewriteDescendantCount,
+  onRewritePreviewChange,
 }: Props) {
   const [explanation, setExplanation] =
     useState<string | null>(null);
@@ -156,6 +164,7 @@ export default function NodeDetails({
 
       setExplanation(null);
       setIsEditing(false);
+      onRewritePreviewChange(false);
     } catch (error) {
       console.error(error);
       setChangeError(
@@ -195,6 +204,7 @@ export default function NodeDetails({
     setChangeError(null);
     setIsEditing(false);
     setSelectedAlternative(null);
+    onRewritePreviewChange(false);
   }
 
   const isRoot =
@@ -219,6 +229,25 @@ export default function NodeDetails({
           >
             {node.data.domain}
           </div>
+
+          {causalPath.length > 1 && (
+            <nav className="causal-breadcrumb" aria-label="Causal path">
+              <span>ARISING FROM</span>
+              <div>
+                {causalPath.map((pathNode, index) => (
+                  <span className="causal-breadcrumb-step" key={pathNode.id}>
+                    {index > 0 && <i aria-hidden="true">→</i>}
+                    <button
+                      onClick={() => onFocusNode(pathNode.id)}
+                      aria-current={pathNode.id === node.id ? "location" : undefined}
+                    >
+                      {pathNode.data.title}
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </nav>
+          )}
 
           <h2>{node.data.title}</h2>
 
@@ -301,6 +330,7 @@ export default function NodeDetails({
                 setChangeError(null);
                 setReplacementMode("alternatives");
                 setIsEditing(true);
+                onRewritePreviewChange(true);
               }}
               disabled={isRoot}
             >
@@ -322,6 +352,15 @@ export default function NodeDetails({
             Choose another plausible outcome, or write your own.
             Everything downstream will be rewritten.
           </p>
+
+          {rewriteDescendantCount > 0 && (
+            <div className="rewrite-impact" role="status">
+              <strong>{rewriteDescendantCount}</strong>
+              <span>
+                downstream {rewriteDescendantCount === 1 ? "consequence" : "consequences"} will be rewritten
+              </span>
+            </div>
+          )}
 
           <div className="detail-divider" />
 

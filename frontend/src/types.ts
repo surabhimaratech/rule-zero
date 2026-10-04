@@ -3,6 +3,7 @@ export type WorldNodeData = {
   description: string;
   domain: string;
   nodeType: "rule" | "consequence";
+  explorationState?: "origin" | "established" | "frontier";
 };
 
 export type OutcomeAlternative = {

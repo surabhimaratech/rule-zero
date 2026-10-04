@@ -15,6 +15,7 @@ public class WorldService {
 
     private final Neo4jClient neo4jClient;
     private final OpenRouterService openRouterService;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public WorldService(
             Neo4jClient neo4jClient,
@@ -621,6 +622,8 @@ public class WorldService {
                 .bind(updatedAt).to("updatedAt")
                 .run();
 
+        invalidateWorldAnalysis(worldId);
+
         neo4jClient.query("""
                 MATCH (world:World {id: $worldId})-[:HAS_NODE]->(parent:WorldNode)
                       -[r:CAUSES]->(node:WorldNode {id: $nodeId})
@@ -733,7 +736,7 @@ public class WorldService {
 
         if (cachedJson != null) {
             try {
-                return new ObjectMapper().readValue(
+                return objectMapper.readValue(
                         cachedJson.toString(),
                         FaultLineResponse.class
                 );
@@ -810,9 +813,7 @@ public class WorldService {
                 );
 
         try {
-            String json =
-                    new ObjectMapper()
-                            .writeValueAsString(result);
+            String json = objectMapper.writeValueAsString(result);
 
             neo4jClient.query("""
                     MATCH (world:World {id: $worldId})
