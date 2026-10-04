@@ -86,6 +86,34 @@ function frameWorldOrigin(
   });
 }
 
+function frameNodeNeighborhood(
+  instance: ReactFlowInstance<Node<WorldNodeData>, Edge>,
+  graph: LoadedGraph,
+  nodeId: string
+) {
+  const relatedIds = new Set([nodeId]);
+
+  graph.edges.forEach((edge) => {
+    if (edge.target === nodeId) {
+      relatedIds.add(edge.source);
+    }
+
+    if (edge.source === nodeId) {
+      relatedIds.add(edge.target);
+    }
+  });
+
+  const neighborhood = graph.nodes.filter((node) => relatedIds.has(node.id));
+
+  void instance.fitView({
+    nodes: neighborhood,
+    padding: 0.34,
+    minZoom: 0.72,
+    maxZoom: 1,
+    duration: 420,
+  });
+}
+
 function shortenRelationship(value: string, maxLength = 56) {
   const trimmed = value.trim();
 
@@ -695,8 +723,18 @@ export default function WorldGraph({
       setSelectedNode(
         node as Node<WorldNodeData>
       );
+
+      window.requestAnimationFrame(() => {
+        if (flowInstanceRef.current) {
+          frameNodeNeighborhood(
+            flowInstanceRef.current,
+            { nodes, edges },
+            node.id
+          );
+        }
+      });
     },
-    []
+    [edges, nodes]
   );
 
   const selectedNodeHasChildren =
