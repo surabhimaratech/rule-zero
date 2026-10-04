@@ -14,6 +14,7 @@ import {
   useNodesState,
   type Edge,
   type Node,
+  type ReactFlowInstance,
 } from "@xyflow/react";
 import dagre from "@dagrejs/dagre";
 
@@ -55,6 +56,35 @@ type LoadedGraph = {
   nodes: Node<WorldNodeData>[];
   edges: Edge[];
 };
+
+function frameWorldOrigin(
+  instance: ReactFlowInstance<Node<WorldNodeData>, Edge>,
+  graph: LoadedGraph,
+  duration = 0
+) {
+  const root = graph.nodes.find((node) => node.data.nodeType === "rule");
+
+  if (!root) {
+    return;
+  }
+
+  const immediateIds = new Set(
+    graph.edges
+      .filter((edge) => edge.source === root.id)
+      .map((edge) => edge.target)
+  );
+  const openingNodes = graph.nodes.filter(
+    (node) => node.id === root.id || immediateIds.has(node.id)
+  );
+
+  void instance.fitView({
+    nodes: openingNodes,
+    padding: 0.24,
+    minZoom: 0.7,
+    maxZoom: 0.86,
+    duration,
+  });
+}
 
 function shortenRelationship(value: string, maxLength = 56) {
   const trimmed = value.trim();
@@ -170,6 +200,8 @@ export default function WorldGraph({
   const [showIgnitionPrompt, setShowIgnitionPrompt] = useState(false);
   const shouldIgniteRef = useRef(false);
   const ignitionRunRef = useRef(0);
+  const flowInstanceRef = useRef<ReactFlowInstance<Node<WorldNodeData>, Edge> | null>(null);
+  const loadedGraphRef = useRef<LoadedGraph | null>(null);
 
   const loadGraph = useCallback(
     async (
@@ -249,10 +281,13 @@ export default function WorldGraph({
       setNodes(laidOutNodes);
       setEdges(reactFlowEdges);
 
-      return {
+      const loadedGraph = {
         nodes: laidOutNodes,
         edges: reactFlowEdges,
       };
+
+      loadedGraphRef.current = loadedGraph;
+      return loadedGraph;
     },
     [setNodes, setEdges]
   );
@@ -289,6 +324,12 @@ export default function WorldGraph({
 
     loadGraph(worldId)
       .then((graph) => {
+        window.requestAnimationFrame(() => {
+          if (flowInstanceRef.current) {
+            frameWorldOrigin(flowInstanceRef.current, graph, 450);
+          }
+        });
+
         if (!shouldIgniteRef.current) {
           return;
         }
@@ -1069,7 +1110,7 @@ export default function WorldGraph({
             </div>
           )}
 
-          <ReactFlow
+          <ReactFlow<Node<WorldNodeData>, Edge>
             className={selectedFaultLine ? "fault-line-flow" : undefined}
             nodes={displayedNodes}
             edges={displayedEdges}
@@ -1077,11 +1118,14 @@ export default function WorldGraph({
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onNodeClick={handleNodeClick}
-            fitView
-            fitViewOptions={{
-              padding: 0.18,
-              minZoom: 0.45,
+            onInit={(instance) => {
+              flowInstanceRef.current = instance;
+
+              if (loadedGraphRef.current) {
+                frameWorldOrigin(instance, loadedGraphRef.current);
+              }
             }}
+            defaultViewport={{ x: 90, y: 90, zoom: 0.78 }}
             minZoom={0.4}
             maxZoom={1.5}
           >
