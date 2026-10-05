@@ -22,6 +22,7 @@ import "@xyflow/react/dist/style.css";
 
 import type {
   EverydayObject,
+  EverydayObjectsResponse,
   FaultLine,
   FaultLineResponse,
   InquiryDirection,
@@ -214,6 +215,10 @@ export default function WorldGraph({
     useState<EverydayObject[]>([]);
   const [showEverydayObjects, setShowEverydayObjects] =
     useState(false);
+  const [isAnalyzingEverydayObjects, setIsAnalyzingEverydayObjects] =
+    useState(false);
+  const [selectedEverydayObjectIndex, setSelectedEverydayObjectIndex] =
+    useState<number | null>(null);
   const [everydayObjectsError, setEverydayObjectsError] =
     useState<string | null>(null);
 
@@ -534,6 +539,48 @@ export default function WorldGraph({
     }
   }
 
+  async function analyzeEverydayObjects() {
+    if (!worldId || isAnalyzingEverydayObjects) {
+      return;
+    }
+
+    setSelectedNode(null);
+    setRewritePreviewNodeId(null);
+    setShowFaultLines(false);
+    setSelectedFaultLineIndex(null);
+    setIsConflictImmersive(false);
+    setEvidenceFocusNodeId(null);
+    setSelectedEverydayObjectIndex(null);
+
+    if (everydayObjects.length > 0) {
+      setShowEverydayObjects(true);
+      return;
+    }
+
+    setIsAnalyzingEverydayObjects(true);
+    setEverydayObjectsError(null);
+
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/worlds/${worldId}/analysis/everyday-objects`,
+        { method: "POST" }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to examine everyday objects");
+      }
+
+      const data: EverydayObjectsResponse = await response.json();
+      setEverydayObjects(data.objects);
+      setShowEverydayObjects(true);
+    } catch (err) {
+      console.error(err);
+      setEverydayObjectsError("Could not examine this world's everyday objects.");
+    } finally {
+      setIsAnalyzingEverydayObjects(false);
+    }
+  }
+
   async function explainNode(
     nodeId: string
   ): Promise<string> {
@@ -793,6 +840,7 @@ export default function WorldGraph({
         setShowFaultLines(false);
         setSelectedFaultLineIndex(null);
         setShowEverydayObjects(false);
+        setSelectedEverydayObjectIndex(null);
         setIsFaultLineDetailsOpen(false);
         setIsConflictImmersive(false);
         ignitionRunRef.current += 1;
@@ -850,6 +898,17 @@ export default function WorldGraph({
     selectedFaultLineIndex === null
       ? null
       : faultLines[selectedFaultLineIndex] ?? null;
+  const selectedEverydayObject = selectedEverydayObjectIndex === null
+    ? null
+    : everydayObjects[selectedEverydayObjectIndex] ?? null;
+  const everydayEvidenceIds = new Set(selectedEverydayObject?.supportingNodeIds ?? []);
+  const everydayEvidenceNodes = nodes
+    .filter((node) => everydayEvidenceIds.has(node.id))
+    .map((node) => ({
+      id: node.id,
+      title: node.data.title,
+      domain: node.data.domain,
+    }));
 
   const factionANodeIds = new Set(
     selectedFaultLine?.factionA.supportingNodeIds ?? []
@@ -958,6 +1017,20 @@ export default function WorldGraph({
             : supportsFactionB
               ? "graph-node-faction-b"
               : "graph-node-fault-line-dimmed");
+
+        if (evidenceFocusNodeId) {
+          classNames.push(
+            node.id === evidenceFocusNodeId
+              ? "graph-node-evidence-focus"
+              : "graph-node-evidence-muted"
+          );
+        }
+      } else if (selectedEverydayObject) {
+        classNames.push(
+          everydayEvidenceIds.has(node.id)
+            ? "graph-node-object-evidence"
+            : "graph-node-fault-line-dimmed"
+        );
 
         if (evidenceFocusNodeId) {
           classNames.push(
@@ -1179,7 +1252,7 @@ export default function WorldGraph({
         </div>
       )}
 
-      <div className={`world-layout${showFaultLines && !isConflictImmersive ? " field-guide-open" : ""}${isConflictImmersive ? " conflict-immersive" : ""}`}>
+      <div className={`world-layout${(showFaultLines || showEverydayObjects) && !isConflictImmersive ? " field-guide-open" : ""}${isConflictImmersive ? " conflict-immersive" : ""}`}>
         <div className="graph-container">
           {currentWorld && !showFaultLines && (
             <div className="causal-depth-regions" aria-hidden="true">
@@ -1239,6 +1312,7 @@ export default function WorldGraph({
                   setShowFaultLines(false);
                   setShowEverydayObjects(false);
                   setSelectedFaultLineIndex(null);
+                  setSelectedEverydayObjectIndex(null);
                 }}
               >
                 World
@@ -1250,6 +1324,14 @@ export default function WorldGraph({
               >
                 {isAnalyzingFaultLines ? "Finding divisions…" : "Fault Lines"}
                 {faultLines.length > 0 && <small>{faultLines.length}</small>}
+              </button>
+              <button
+                className={showEverydayObjects ? "active" : ""}
+                onClick={() => void analyzeEverydayObjects()}
+                disabled={isAnalyzingEverydayObjects}
+              >
+                {isAnalyzingEverydayObjects ? "Examining objects…" : "Everyday Objects"}
+                {everydayObjects.length > 0 && <small>{everydayObjects.length}</small>}
               </button>
             </nav>
           )}
@@ -1476,7 +1558,29 @@ export default function WorldGraph({
         {showEverydayObjects && (
           <EverydayObjectsPanel
             objects={everydayObjects}
-            onClose={() => setShowEverydayObjects(false)}
+            selectedIndex={selectedEverydayObjectIndex}
+            evidenceNodes={everydayEvidenceNodes}
+            onSelect={(index) => {
+              setEvidenceFocusNodeId(null);
+              setSelectedEverydayObjectIndex(index);
+            }}
+            onEvidenceFocus={setEvidenceFocusNodeId}
+            onEvidenceSelect={(nodeId) => {
+              setEvidenceFocusNodeId(nodeId);
+
+              if (flowInstanceRef.current && loadedGraphRef.current) {
+                frameNodeNeighborhood(
+                  flowInstanceRef.current,
+                  loadedGraphRef.current,
+                  nodeId
+                );
+              }
+            }}
+            onClose={() => {
+              setEvidenceFocusNodeId(null);
+              setSelectedEverydayObjectIndex(null);
+              setShowEverydayObjects(false);
+            }}
           />
         )}
       </div>

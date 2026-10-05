@@ -68,7 +68,8 @@ evidence behind opposing factions and projecting their likely flashpoint.
 
 The Field Guide is the analysis layer of a simulated world. It deliberately
 stays beside the causal graph instead of becoming a separate report or lore
-database. The chapter bar currently exposes **World** and **Fault Lines**.
+database. The chapter bar currently exposes **World**, **Fault Lines**, and
+**Everyday Objects**.
 
 Fault Lines opens as a chapter index. Entering a division reveals one editorial
 conflict page at a time: its central tension, the two incompatible belief
@@ -77,9 +78,11 @@ turn the disagreement into a story. Causal evidence links back to the exact
 nodes that produced the conflict. **Trace causes** frames those nodes and their
 ancestry; **Enter conflict** expands the graph into a full-width conflict map.
 
-Everyday Objects analysis remains implemented as a cached experimental analysis,
-but it is intentionally not included in the chapter navigation yet. New Field
-Guide chapters should only be exposed once they have a distinct graph-grounded
+Everyday Objects opens as a cabinet of altered things. Each object has a focused
+artifact page showing what it was before the foundational rule, what it becomes
+in the simulated reality, and why it changed. Its causal provenance links back
+to the exact consequences responsible for the transformation. New Field Guide
+chapters should follow this principle: each needs a distinct, graph-grounded
 interaction rather than a generic generated-results panel.
 
 ## Local setup
